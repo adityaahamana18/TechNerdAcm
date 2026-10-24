@@ -75,6 +75,9 @@
     {% if session.get('admin_email') %}
       <a href="{{ url_for('dashboard') }}" class="admin-link" style="border-color:var(--cyan);background:rgba(56,189,248,0.15);color:var(--cyan);">ADMIN DASHBOARD ↗</a>
     {% else %}
+      <button type="button" class="btn ghost dev-btn-pill" onclick="openDevModal()" style="padding:6px 14px; font-size:11px; font-weight:700; border-color:rgba(192,132,252,0.4); background:rgba(168,85,247,0.1); color:#d8b4fe;">
+        <span style="margin-right:4px;">⚡</span> DEVELOPER
+      </button>
       <a href="{{ url_for('admin_login') }}" class="admin-link">ADMIN ↗</a>
     {% endif %}
   </div>
@@ -91,10 +94,66 @@
   {% block content %}{% endblock %}
 </main>
 
+<!-- Animated Developer Spotlight Modal -->
+<div id="devModal" class="security-modal-overlay" style="display:none; z-index:99999;">
+  <div class="security-modal panel dev-modal-card">
+    <div class="dev-modal-header">
+      <div class="dev-avatar-glow">
+        <span class="cyber-glyph" style="font-size:28px;">⌁</span>
+      </div>
+      <div>
+        <div class="section-kicker" style="color:var(--cyan); margin:0;">LEAD ARCHITECT & DEVELOPER</div>
+        <h2 style="font-size:24px; color:var(--text-bright); margin-top:2px;">Aditya Hamana</h2>
+      </div>
+      <button type="button" class="icon-btn close-modal-btn" onclick="closeDevModal()" style="margin-left:auto;">×</button>
+    </div>
+
+    <div class="dev-role-badge">
+      <span>MITS ACM Student Chapter · TechPulse Core Lead</span>
+    </div>
+
+    <p class="muted" style="font-size:13px; line-height:1.6; margin:16px 0;">
+      Engineered and built the <strong>TECHNERD 2026</strong> real-time multi-stage progressive quiz arena, proctored anti-cheat engine, server-verified scoring, and Supabase cloud architecture.
+    </p>
+
+    <div class="dev-tech-stack">
+      <span class="tech-pill">Python / Flask</span>
+      <span class="tech-pill">Supabase PostgreSQL</span>
+      <span class="tech-pill">Real-Time WebSockets & REST</span>
+      <span class="tech-pill">Cyberpunk UI / Canvas</span>
+      <span class="tech-pill">Proctor Anti-Cheat Engine</span>
+    </div>
+
+    <div class="dev-actions" style="display:flex; gap:12px; margin-top:22px; flex-wrap:wrap;">
+      <a href="https://github.com/adityaahamana18" target="_blank" class="btn primary" style="flex:1; justify-content:center; padding:12px; font-size:11px;">
+        GITHUB PROFILE ↗
+      </a>
+      <a href="mailto:adityaahamana18@gmail.com" class="btn ghost" style="flex:1; justify-content:center; padding:12px; font-size:11px;">
+        CONTACT DEVELOPER ✉
+      </a>
+    </div>
+  </div>
+</div>
+
 <footer>THINK · DECODE · DEBUG · CONQUER <span>© TECHNERD / MITS ACM</span></footer>
 
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 <script>
+  function openDevModal() {
+    const modal = document.getElementById('devModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      modal.style.opacity = '1';
+    }
+  }
+
+  function closeDevModal() {
+    const modal = document.getElementById('devModal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  }
+
   // High-Energy Intro Loader Execution (3.0 Seconds Full Cinematic Duration)
   (function() {
     const loader = document.getElementById('introLoader');

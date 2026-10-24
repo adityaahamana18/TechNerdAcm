@@ -1502,3 +1502,168 @@ input:focus, textarea:focus, select:focus {
   .admin-head { flex-direction: column; align-items: flex-start; }
   .topbar { padding: 0 16px; }
 }
+
+/* ==========================================================================
+   ENHANCED CYBER ANIMATIONS & DEVELOPER SHOWCASE
+   ========================================================================== */
+
+/* Hero Heading Shimmer & Glow Animation */
+.glow-effect {
+  animation: glowPulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes glowPulse {
+  0% {
+    text-shadow: 0 0 20px rgba(56, 189, 248, 0.4), 0 0 40px rgba(168, 85, 247, 0.2);
+  }
+  100% {
+    text-shadow: 0 0 35px rgba(56, 189, 248, 0.8), 0 0 60px rgba(168, 85, 247, 0.5);
+  }
+}
+
+/* Floating animation on cards & badges */
+.hero-badge-pill {
+  animation: floatSubtle 4s ease-in-out infinite;
+}
+
+@keyframes floatSubtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.hero-tag-item {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-tag-item:hover {
+  transform: translateY(-3px) scale(1.03);
+  border-color: var(--cyan);
+  box-shadow: 0 8px 20px rgba(56, 189, 248, 0.2);
+}
+
+/* Developer Spotlight Modal Styling */
+.dev-modal-card {
+  max-width: 560px;
+  background: linear-gradient(145deg, rgba(13, 20, 36, 0.98), rgba(20, 16, 38, 0.98));
+  border: 1px solid rgba(192, 132, 252, 0.35);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(168, 85, 247, 0.2);
+  border-radius: 20px;
+  padding: 30px;
+  animation: modalPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPopIn {
+  from { opacity: 0; transform: scale(0.92) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.dev-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 18px;
+}
+
+.dev-avatar-glow {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #38bdf8, #a855f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.5);
+}
+
+.dev-role-badge {
+  display: inline-flex;
+  margin-top: 16px;
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  color: #d8b4fe;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+.dev-tech-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.tech-pill {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.tech-pill:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(56, 189, 248, 0.1);
+}
+
+/* Developer Banner on Homepage */
+.dev-banner-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  margin-top: 24px;
+  background: linear-gradient(135deg, rgba(16, 24, 43, 0.75), rgba(30, 20, 50, 0.75));
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dev-banner-section:hover {
+  transform: translateY(-3px);
+  border-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 12px 30px rgba(168, 85, 247, 0.15);
+}
+
+.dev-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dev-avatar-glow-sm {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #38bdf8, #a855f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+}
+
+.dev-pill-action {
+  font-size: 11px;
+  font-weight: 700;
+  border-color: rgba(168, 85, 247, 0.4);
+  color: #d8b4fe;
+}
+
+.dev-btn-pill {
+  animation: glowBorder 2.5s infinite alternate;
+}
+
+@keyframes glowBorder {
+  0% { box-shadow: 0 0 6px rgba(168, 85, 247, 0.2); }
+  100% { box-shadow: 0 0 16px rgba(168, 85, 247, 0.6); }
+}
