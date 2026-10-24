@@ -1613,57 +1613,71 @@ input:focus, textarea:focus, select:focus {
   background: rgba(56, 189, 248, 0.1);
 }
 
-/* Developer Banner on Homepage */
-.dev-banner-section {
-  display: flex;
-  justify-content: space-between;
+/* Header Developer Pill */
+.header-dev-trigger {
+  display: inline-flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px 24px;
-  margin-top: 24px;
-  background: linear-gradient(135deg, rgba(16, 24, 43, 0.75), rgba(30, 20, 50, 0.75));
-  border: 1px solid rgba(168, 85, 247, 0.25);
-  border-radius: 14px;
+  gap: 10px;
+  background: rgba(16, 24, 43, 0.85);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  padding: 5px 14px 5px 6px;
+  border-radius: 30px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.15);
 }
 
-.dev-banner-section:hover {
-  transform: translateY(-3px);
-  border-color: rgba(168, 85, 247, 0.6);
-  box-shadow: 0 12px 30px rgba(168, 85, 247, 0.15);
+.header-dev-trigger:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: #c084fc;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.45);
+  background: rgba(26, 18, 48, 0.95);
 }
 
-.dev-banner-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.dev-avatar-glow-sm {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+.header-dev-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
   background: linear-gradient(135deg, #38bdf8, #a855f7);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+  font-size: 13px;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
 }
 
-.dev-pill-action {
-  font-size: 11px;
+.header-dev-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.header-dev-label {
+  font-size: 8.5px;
+  font-weight: 800;
+  color: var(--cyan);
+  letter-spacing: 1px;
+}
+
+.header-dev-name {
+  font-size: 11.5px;
   font-weight: 700;
-  border-color: rgba(168, 85, 247, 0.4);
-  color: #d8b4fe;
+  color: var(--text-bright);
 }
 
-.dev-btn-pill {
-  animation: glowBorder 2.5s infinite alternate;
+@media (max-width: 640px) {
+  .hide-mobile {
+    display: none !important;
+  }
+  .header-dev-meta {
+    display: none;
+  }
+  .header-dev-trigger {
+    padding: 4px;
+    border-radius: 50%;
+  }
 }
 
-@keyframes glowBorder {
-  0% { box-shadow: 0 0 6px rgba(168, 85, 247, 0.2); }
-  100% { box-shadow: 0 0 16px rgba(168, 85, 247, 0.6); }
-}
+/* Developer Spotlight Modal */
