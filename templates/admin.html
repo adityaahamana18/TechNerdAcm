@@ -171,6 +171,38 @@
         <button class="btn primary full" style="padding:10px; font-weight:800;" type="submit">▶ START STAGE 1 FOR ALL PARTICIPANTS</button>
         {% endif %}
       </form>
+
+      <!-- Live Question Pacing Controller for Stage 1 -->
+      <div style="margin-top:14px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:11px; font-weight:700; color:var(--cyan); letter-spacing:0.5px;">ACTIVE QUESTION:</span>
+          <span style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-size:12px; font-weight:800; padding:2px 8px; border-radius:6px;">
+            Q{{ s1_current_q }} / {{ s1_total_q }}
+          </span>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+          <form method="post" action="{{ url_for('admin_question_control') }}">
+            <input type="hidden" name="stage" value="1">
+            <input type="hidden" name="action" value="prev">
+            <button type="submit" class="btn ghost full" style="padding:7px; font-size:11px;" {% if s1_current_q <= 1 %}disabled{% endif %}>
+              ◀ PREV Q
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('admin_question_control') }}">
+            <input type="hidden" name="stage" value="1">
+            <input type="hidden" name="action" value="next">
+            <button type="submit" class="btn primary full" style="padding:7px; font-size:11px; font-weight:800;" {% if s1_current_q >= s1_total_q %}disabled{% endif %}>
+              RELEASE NEXT Q ▶
+            </button>
+          </form>
+        </div>
+        <form method="post" action="{{ url_for('admin_question_control') }}" style="display:flex; gap:6px; margin-top:6px;">
+          <input type="hidden" name="stage" value="1">
+          <input type="hidden" name="action" value="set">
+          <input type="number" name="target_q" min="1" max="{{ s1_total_q }}" value="{{ s1_current_q }}" style="padding:6px 10px; font-size:12px; width:70px; text-align:center;">
+          <button type="submit" class="btn ghost full" style="padding:6px; font-size:11px;">SET QUESTION</button>
+        </form>
+      </div>
     </div>
 
     <!-- Stage 2 Gate Card -->
@@ -200,6 +232,38 @@
         <button class="btn primary full" style="padding:10px; font-weight:800;" type="submit">▶ START STAGE 2 FOR QUALIFIED TOP 10</button>
         {% endif %}
       </form>
+
+      <!-- Live Question Pacing Controller for Stage 2 -->
+      <div style="margin-top:14px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:11px; font-weight:700; color:var(--cyan); letter-spacing:0.5px;">ACTIVE QUESTION:</span>
+          <span style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-size:12px; font-weight:800; padding:2px 8px; border-radius:6px;">
+            Q{{ s2_current_q }} / {{ s2_total_q }}
+          </span>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+          <form method="post" action="{{ url_for('admin_question_control') }}">
+            <input type="hidden" name="stage" value="2">
+            <input type="hidden" name="action" value="prev">
+            <button type="submit" class="btn ghost full" style="padding:7px; font-size:11px;" {% if s2_current_q <= 1 %}disabled{% endif %}>
+              ◀ PREV Q
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('admin_question_control') }}">
+            <input type="hidden" name="stage" value="2">
+            <input type="hidden" name="action" value="next">
+            <button type="submit" class="btn primary full" style="padding:7px; font-size:11px; font-weight:800;" {% if s2_current_q >= s2_total_q %}disabled{% endif %}>
+              RELEASE NEXT Q ▶
+            </button>
+          </form>
+        </div>
+        <form method="post" action="{{ url_for('admin_question_control') }}" style="display:flex; gap:6px; margin-top:6px;">
+          <input type="hidden" name="stage" value="2">
+          <input type="hidden" name="action" value="set">
+          <input type="number" name="target_q" min="1" max="{{ s2_total_q }}" value="{{ s2_current_q }}" style="padding:6px 10px; font-size:12px; width:70px; text-align:center;">
+          <button type="submit" class="btn ghost full" style="padding:6px; font-size:11px;">SET QUESTION</button>
+        </form>
+      </div>
     </div>
 
     <!-- Stage 3 Gate Card -->
@@ -229,6 +293,38 @@
         <button class="btn primary full" style="padding:10px; font-weight:800;" type="submit">▶ START STAGE 3 FOR TOP 3 FINALISTS</button>
         {% endif %}
       </form>
+
+      <!-- Live Question Pacing Controller for Stage 3 -->
+      <div style="margin-top:14px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:11px; font-weight:700; color:var(--cyan); letter-spacing:0.5px;">ACTIVE QUESTION:</span>
+          <span style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-size:12px; font-weight:800; padding:2px 8px; border-radius:6px;">
+            Q{{ s3_current_q }} / {{ s3_total_q }}
+          </span>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+          <form method="post" action="{{ url_for('admin_question_control') }}">
+            <input type="hidden" name="stage" value="3">
+            <input type="hidden" name="action" value="prev">
+            <button type="submit" class="btn ghost full" style="padding:7px; font-size:11px;" {% if s3_current_q <= 1 %}disabled{% endif %}>
+              ◀ PREV Q
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('admin_question_control') }}">
+            <input type="hidden" name="stage" value="3">
+            <input type="hidden" name="action" value="next">
+            <button type="submit" class="btn primary full" style="padding:7px; font-size:11px; font-weight:800;" {% if s3_current_q >= s3_total_q %}disabled{% endif %}>
+              RELEASE NEXT Q ▶
+            </button>
+          </form>
+        </div>
+        <form method="post" action="{{ url_for('admin_question_control') }}" style="display:flex; gap:6px; margin-top:6px;">
+          <input type="hidden" name="stage" value="3">
+          <input type="hidden" name="action" value="set">
+          <input type="number" name="target_q" min="1" max="{{ s3_total_q }}" value="{{ s3_current_q }}" style="padding:6px 10px; font-size:12px; width:70px; text-align:center;">
+          <button type="submit" class="btn ghost full" style="padding:6px; font-size:11px;">SET QUESTION</button>
+        </form>
+      </div>
     </div>
   </div>
 </section>

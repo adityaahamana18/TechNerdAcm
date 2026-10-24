@@ -92,6 +92,9 @@ def init_db():
             INSERT INTO settings(key, value) VALUES('stage1_active', '0') ON CONFLICT(key) DO NOTHING;
             INSERT INTO settings(key, value) VALUES('stage2_active', '0') ON CONFLICT(key) DO NOTHING;
             INSERT INTO settings(key, value) VALUES('stage3_active', '0') ON CONFLICT(key) DO NOTHING;
+            INSERT INTO settings(key, value) VALUES('stage1_current_q', '1') ON CONFLICT(key) DO NOTHING;
+            INSERT INTO settings(key, value) VALUES('stage2_current_q', '1') ON CONFLICT(key) DO NOTHING;
+            INSERT INTO settings(key, value) VALUES('stage3_current_q', '1') ON CONFLICT(key) DO NOTHING;
             """)
         else:
             # SQLite schema for local development
@@ -163,6 +166,8 @@ def init_db():
 
         c.execute("INSERT INTO settings(key,value) VALUES('event_code','TECH2026') ON CONFLICT(key) DO NOTHING")
         c.execute("INSERT INTO settings(key,value) VALUES('stage1_active','0') ON CONFLICT(key) DO NOTHING")
+        for s in (1, 2, 3):
+            c.execute(f"INSERT INTO settings(key,value) VALUES('stage{s}_current_q','1') ON CONFLICT(key) DO NOTHING")
         c.execute("INSERT INTO settings(key,value) VALUES('stage2_active','0') ON CONFLICT(key) DO NOTHING")
         c.execute("INSERT INTO settings(key,value) VALUES('stage3_active','0') ON CONFLICT(key) DO NOTHING")
 
@@ -520,9 +525,28 @@ def quiz_state():
                         "message": f"You are in the waiting area for Stage {s_num} ({s_name}). Waiting for Admin to start the stage for all participants simultaneously..."
                     })
 
-                # Stage is active! Find the next unanswered question
+                # Stage is active! Enforce Admin-controlled Question Pacing
+                current_allowed_q = int(setting(c, f"stage{s_num}_current_q", "1"))
+                
+                # Check the first unanswered question
                 for idx, q in enumerate(stage_qs):
                     if q["id"] not in answered_ids:
+                        q_num = idx + 1
+                        # If Admin has not released this question yet, participant waits!
+                        if q_num > current_allowed_q:
+                            return jsonify({
+                                "status": "waiting_for_next_question",
+                                "stage": s_num,
+                                "stage_title": f"STAGE 0{s_num}: {s_name.upper()}",
+                                "stage_name": s_name,
+                                "answered_q": q_num - 1,
+                                "waiting_for_q": q_num,
+                                "stage_total": len(stage_qs),
+                                "current_score": current_score,
+                                "message": f"You have completed Question {q_num - 1}! Please wait for Admin to release Question {q_num}..."
+                            })
+
+                        # Question is released by Admin: deliver it!
                         session[f"q_delivered_{q['id']}"] = time.time()
                         return jsonify({
                             "status": "in_progress",
@@ -530,7 +554,7 @@ def quiz_state():
                             "total_stages": len(stages),
                             "stage_title": f"STAGE {s_num}: {s_name.upper()}",
                             "topic": q["topic"],
-                            "stage_index": idx + 1,
+                            "stage_index": q_num,
                             "stage_total": len(stage_qs),
                             "current_score": current_score,
                             "question": {
@@ -718,6 +742,36 @@ def admin_stage_control():
         flash(f"Stage {stage} has been {status_word}.", "success")
     return redirect(url_for("dashboard"))
 
+# Admin question pacing control (Next question, Previous question, or Set question number)
+@app.route("/admin/question-control", methods=["POST"])
+@admin_required
+def admin_question_control():
+    stage = request.form.get("stage")
+    action = request.form.get("action")
+    target_q = request.form.get("target_q")
+
+    if stage in ("1", "2", "3"):
+        with db() as c:
+            max_qs = c.execute("SELECT COUNT(*) n FROM questions WHERE stage=? AND active=1", (int(stage),)).fetchone()["n"] or 25
+            current_q = int(setting(c, f"stage{stage}_current_q", "1"))
+
+            if action == "next":
+                new_q = min(max_qs, current_q + 1)
+            elif action == "prev":
+                new_q = max(1, current_q - 1)
+            elif action == "set" and target_q:
+                try:
+                    new_q = max(1, min(max_qs, int(target_q)))
+                except ValueError:
+                    new_q = current_q
+            else:
+                new_q = current_q
+
+            set_setting(c, f"stage{stage}_current_q", str(new_q))
+            flash(f"Stage {stage}: Active question set to Question {new_q} (out of {max_qs}) for all participants.", "success")
+
+    return redirect(url_for("dashboard"))
+
 @app.route("/api/admin/security-logs")
 @admin_required
 def security_logs_api():
@@ -778,6 +832,12 @@ def dashboard():
         s1_active = setting(c, "stage1_active", "0") == "1"
         s2_active = setting(c, "stage2_active", "0") == "1"
         s3_active = setting(c, "stage3_active", "0") == "1"
+        s1_current_q = int(setting(c, "stage1_current_q", "1"))
+        s2_current_q = int(setting(c, "stage2_current_q", "1"))
+        s3_current_q = int(setting(c, "stage3_current_q", "1"))
+        s1_total_q = c.execute("SELECT COUNT(*) n FROM questions WHERE stage=1 AND active=1").fetchone()["n"] or 25
+        s2_total_q = c.execute("SELECT COUNT(*) n FROM questions WHERE stage=2 AND active=1").fetchone()["n"] or 10
+        s3_total_q = 5 # 5 questions per topic in Stage 3
     return render_template("admin.html", 
                            stages=stages,
                            questions=questions, 
@@ -787,7 +847,13 @@ def dashboard():
                            event_code=event_code,
                            s1_active=s1_active,
                            s2_active=s2_active,
-                           s3_active=s3_active)
+                           s3_active=s3_active,
+                           s1_current_q=s1_current_q,
+                           s2_current_q=s2_current_q,
+                           s3_current_q=s3_current_q,
+                           s1_total_q=s1_total_q,
+                           s2_total_q=s2_total_q,
+                           s3_total_q=s3_total_q)
 
 # Stage Management Routes (Add Stage, Edit Stage, Delete Stage)
 @app.route("/admin/stage", methods=["POST"])

@@ -268,6 +268,40 @@ async function loadQuestion() {
       return;
     }
 
+    // 1.5 Question Pacing Waiting Room (Waiting for Admin to Release Next Question)
+    if (data.status === "waiting_for_next_question") {
+      stopTimer();
+      isQuizActive = false;
+      const sNum = data.stage;
+      $("statusPill").textContent = `STAGE 0${sNum} · Q${data.waiting_for_q} LOCKED`;
+      $("roundLabel").textContent = "WAITING FOR QUESTION RELEASE";
+      let progPercent = (data.answered_q / data.stage_total) * 100;
+      $("progressBar").style.width = `${Math.min(100, progPercent)}%`;
+      $("questionCount").textContent = `STAGE 0${sNum} · ${data.stage_name.toUpperCase()}`;
+      $("questionText").textContent = `⏳ Question ${data.waiting_for_q} will start when Admin allows`;
+      $("timer").textContent = "⏳";
+      $("feedback").textContent = "";
+
+      $("options").innerHTML = `
+        <div style="background: radial-gradient(circle at 50% 20%, rgba(168, 85, 247, 0.12), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 18px; padding: 32px 22px; text-align: center; margin-top: 10px; box-shadow: 0 15px 40px rgba(0,0,0,0.5);">
+          <div style="font-size: 50px; margin-bottom: 12px; filter: drop-shadow(0 0 15px rgba(168,85,247,0.6)); animation: pulseNeon 2.5s infinite ease-in-out;">⏸️</div>
+          <h3 style="font-size: 22px; font-weight:800; color: #d8b4fe; margin-bottom: 8px;">Question ${data.answered_q} Submitted!</h3>
+          <p class="muted" style="max-width: 500px; margin: 0 auto 18px; font-size: 14px; line-height: 1.65; color:#cbd5e1;">
+            ${data.message || `Please wait on this screen. As soon as the Admin releases Question ${data.waiting_for_q}, it will appear here automatically for all participants.`}
+          </p>
+          <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.3); padding:8px 16px; border-radius:20px; font-size:12px; font-weight:700; color:#d8b4fe;">
+            <span class="live-dot" style="background:#c084fc; box-shadow:0 0 10px #c084fc;"></span> Listening for Admin Signal...
+          </div>
+        </div>
+      `;
+
+      // Auto-poll every 2.5 seconds to detect when admin clicks "RELEASE NEXT Q"
+      setTimeout(() => {
+        if (!isQuizActive) loadQuestion();
+      }, 2500);
+      return;
+    }
+
     // 2. Participant Cutoff / Eliminated Screen
     if (data.status === "eliminated") {
       stopTimer();
