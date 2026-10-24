@@ -64,8 +64,9 @@ class DBConnectionWrapper:
         if self.is_pg:
             # Convert SQLite '?' parameter placeholders to PostgreSQL '%s'
             pg_sql = sql.replace("?", "%s")
-            # If inserting and no returning clause, add RETURNING id for lastrowid
-            if pg_sql.strip().upper().startswith("INSERT INTO") and "RETURNING" not in pg_sql.upper():
+            # Only add RETURNING id for specific tables that have an 'id' column
+            has_id_table = any(tbl in pg_sql for tbl in ("participants", "questions", "responses", "security_logs", "admins"))
+            if pg_sql.strip().upper().startswith("INSERT INTO") and has_id_table and "RETURNING" not in pg_sql.upper():
                 pg_sql += " RETURNING id"
             cur = self.conn.cursor(cursor_factory=RealDictCursor)
             cur.execute(pg_sql, params)
