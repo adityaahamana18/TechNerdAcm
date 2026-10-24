@@ -66,13 +66,20 @@ def init_db():
             CREATE TABLE IF NOT EXISTS responses(
                 id SERIAL PRIMARY KEY,
                 participant_id INT NOT NULL,
+                participant_name TEXT DEFAULT '',
                 question_id INT NOT NULL,
+                question_text TEXT DEFAULT '',
                 choice TEXT NOT NULL,
+                selected_text TEXT DEFAULT '',
                 correct INT NOT NULL,
                 points INT NOT NULL,
                 answered_at DOUBLE PRECISION NOT NULL,
                 UNIQUE(participant_id, question_id)
             );
+            -- Safely add columns if table already exists in Supabase
+            ALTER TABLE responses ADD COLUMN IF NOT EXISTS participant_name TEXT DEFAULT '';
+            ALTER TABLE responses ADD COLUMN IF NOT EXISTS question_text TEXT DEFAULT '';
+            ALTER TABLE responses ADD COLUMN IF NOT EXISTS selected_text TEXT DEFAULT '';
             CREATE TABLE IF NOT EXISTS security_logs(
                 id SERIAL PRIMARY KEY,
                 participant_id INT,
@@ -122,8 +129,11 @@ def init_db():
             CREATE TABLE IF NOT EXISTS responses(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 participant_id INTEGER NOT NULL,
+                participant_name TEXT DEFAULT '',
                 question_id INTEGER NOT NULL,
+                question_text TEXT DEFAULT '',
                 choice TEXT NOT NULL,
+                selected_text TEXT DEFAULT '',
                 correct INTEGER NOT NULL,
                 points INTEGER NOT NULL,
                 answered_at REAL NOT NULL,
@@ -394,12 +404,18 @@ def answer():
         correct = int(choice == q["answer"])
         points = q["points"] if correct else 0
 
+        # Retrieve text of question and chosen option for direct readability in DB
+        p_name = session.get("participant_name") or "Participant"
+        q_text = q["question"]
+        chosen_text = q[choice] if choice in ("a", "b", "c", "d") else "Timeout / Skipped"
+
         try:
-            c.execute("INSERT INTO responses(participant_id,question_id,choice,correct,points,answered_at) VALUES(?,?,?,?,?,?)",
-                      (pid, qid, choice, correct, points, now))
-        except sqlite3.IntegrityError:
-            log_security_event(pid, "DUPLICATE_SUBMISSION_ATTEMPT", f"QID: {qid}")
-            return jsonify({"error": "You have already answered this question."}), 409
+            c.execute("""INSERT INTO responses(participant_id, participant_name, question_id, question_text, choice, selected_text, correct, points, answered_at)
+                         VALUES(?,?,?,?,?,?,?,?,?)""",
+                      (pid, p_name, qid, q_text, choice, chosen_text, correct, points, now))
+        except Exception as e:
+            log_security_event(pid, "DUPLICATE_OR_SUBMIT_ERROR", f"QID: {qid}, Err: {str(e)[:100]}")
+            return jsonify({"error": "Answer already submitted or invalid."}), 409
 
     return jsonify({"ok": True, "correct": bool(correct), "points": points, "correct_answer": q["answer"]})
 
