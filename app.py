@@ -329,6 +329,17 @@ def choose_topic():
 
     return jsonify({"ok": True, "topic": topic})
 
+# Acknowledge entry into new stage (intermission dismissal)
+@app.route("/api/start-stage", methods=["POST"])
+def start_stage():
+    pid = session.get("participant_id")
+    if not pid:
+        return jsonify({"error": "Unauthorized"}), 401
+    s_num = (request.json or {}).get("stage")
+    if s_num:
+        session[f"stage_{s_num}_started_{pid}"] = True
+    return jsonify({"ok": True})
+
 # Dynamic Multi-Stage Quiz Progression API
 @app.route("/api/quiz")
 def quiz_state():
@@ -362,12 +373,12 @@ def quiz_state():
             return jsonify({"status": "empty", "message": "No stages configured yet."})
 
         # Process each stage dynamically
-        for stage in stages:
+        for stage_idx, stage in enumerate(stages):
             s_num = stage["stage_num"]
             s_name = stage["name"]
             req_topic = bool(stage["requires_topic_choice"])
 
-            # If this stage requires topic selection and user hasn't chosen one yet
+            # Check if this stage requires topic selection and user hasn't chosen one yet
             if req_topic:
                 available_topics = [r["topic"] for r in c.execute("SELECT DISTINCT topic FROM questions WHERE stage=? AND active=1", (s_num,)).fetchall() if r["topic"]]
                 if not chosen_topic or chosen_topic not in available_topics:
@@ -377,13 +388,29 @@ def quiz_state():
                         "stage_title": f"STAGE {s_num}: {s_name.upper()}",
                         "available_topics": available_topics if available_topics else ["General"],
                         "current_score": current_score,
-                        "message": f"Welcome to Stage {s_num}! Choose your topic to begin."
+                        "message": f"Welcome to Stage {s_num}! Choose your specialization topic to begin."
                     })
-                
-                # Fetch questions for this chosen topic in this stage
                 stage_qs = c.execute("SELECT * FROM questions WHERE stage=? AND topic=? AND active=1 ORDER BY id ASC", (s_num, chosen_topic)).fetchall()
             else:
                 stage_qs = c.execute("SELECT * FROM questions WHERE stage=? AND active=1 ORDER BY id ASC", (s_num,)).fetchall()
+
+            # Check if stage has questions and user is just entering this stage
+            unanswered_qs = [q for q in stage_qs if q["id"] not in answered_ids]
+
+            # If user has not acknowledged entering this stage (e.g. Stage 2, Stage 3 intermission)
+            stage_ack_key = f"stage_{s_num}_started_{pid}"
+            if s_num > 1 and len(unanswered_qs) == len(stage_qs) and not session.get(stage_ack_key):
+                prev_stage_name = stages[stage_idx - 1]["name"] if stage_idx > 0 else f"Stage {s_num - 1}"
+                return jsonify({
+                    "status": "stage_intro",
+                    "stage": s_num,
+                    "stage_title": f"STAGE 0{s_num}: {s_name.upper()}",
+                    "stage_name": s_name,
+                    "prev_stage_name": prev_stage_name,
+                    "question_count": len(stage_qs),
+                    "current_score": current_score,
+                    "message": f"Great job completing {prev_stage_name}! Ready for Stage {s_num}?"
+                })
 
             # Find unanswered question in this stage
             for idx, q in enumerate(stage_qs):
@@ -463,7 +490,7 @@ def answer():
             log_security_event(pid, "DUPLICATE_OR_SUBMIT_ERROR", f"QID: {qid}, Err: {str(e)[:100]}")
             return jsonify({"error": "Answer already submitted or invalid."}), 409
 
-    return jsonify({"ok": True, "correct": bool(correct), "points": points, "correct_answer": q["answer"]})
+    return jsonify({"ok": True, "correct": bool(correct), "points": points})
 
 @app.route("/api/leaderboard")
 @admin_required

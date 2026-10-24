@@ -235,7 +235,35 @@ async function loadQuestion() {
     
     $("playerScore").textContent = `${data.current_score || 0} PTS`;
     
-    // 1. Stage 3 Topic Selection Screen
+    // 1. Stage Intermission Screen (Stage 2 or any non-topic stage kickoff)
+    if (data.status === "stage_intro") {
+      stopTimer();
+      isQuizActive = false;
+      const sNum = data.stage;
+      $("statusPill").textContent = `STAGE 0${sNum} READY`;
+      $("roundLabel").textContent = data.stage_title;
+      $("progressBar").style.width = `${Math.round(((sNum - 1) / 3) * 100)}%`;
+      $("questionCount").textContent = `STAGE 0${sNum} UNLOCKED`;
+      $("questionText").textContent = `🎉 Welcome to Stage ${sNum}: ${data.stage_name}`;
+      $("timer").textContent = "🚀";
+      $("feedback").textContent = "";
+
+      $("options").innerHTML = `
+        <div style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 14px; padding: 28px 20px; text-align: center; margin-top: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+          <div style="font-size: 42px; margin-bottom: 10px;">⚡</div>
+          <h3 style="font-size: 22px; color: var(--cyan); margin-bottom: 8px;">${data.stage_title}</h3>
+          <p class="muted" style="max-width: 440px; margin: 0 auto; font-size: 14px; line-height: 1.6;">
+            You have successfully completed ${data.prev_stage_name}! This round contains <strong>${data.question_count} Questions</strong>. Get ready!
+          </p>
+          <button type="button" class="btn primary" onclick="acknowledgeStage(${sNum})" style="margin-top: 20px; padding: 14px 28px; font-weight: 700; letter-spacing: 1px;">
+            START STAGE ${sNum} NOW ➔
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    // 2. Stage Topic Selection Screen (e.g., Stage 3 Specialization)
     if (data.status === "topic_selection" || data.status === "stage3_topic_selection") {
       stopTimer();
       isQuizActive = false;
@@ -342,6 +370,20 @@ async function loadQuestion() {
   }
 }
 
+// Acknowledge starting a new stage section
+async function acknowledgeStage(stageNum) {
+  try {
+    await fetch("/api/start-stage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stage: stageNum })
+    });
+    loadQuestion();
+  } catch (e) {
+    loadQuestion();
+  }
+}
+
 // Stage 3 Topic Selection handler
 async function selectStage3Topic(topicName) {
   try {
@@ -377,29 +419,27 @@ async function submitAnswer(choice, clickedBtn, isTimeout = false) {
       })
     });
 
-    const correctBtn = optionsContainer.querySelector(`[data-key="${res.correct_answer}"]`);
-    if (correctBtn) correctBtn.classList.add("is-correct");
-
     if (res.correct) {
+      if (clickedBtn) clickedBtn.classList.add("is-correct");
       $("feedback").textContent = `🎉 Correct! +${res.points} points awarded.`;
       $("feedback").className = "feedback correct";
     } else {
       if (clickedBtn) clickedBtn.classList.add("is-wrong");
       if (isTimeout) {
-        $("feedback").textContent = `⏰ Time expired! Option ${res.correct_answer.toUpperCase()} was the correct answer.`;
+        $("feedback").textContent = `⏰ Time expired! Moving to next question...`;
       } else {
-        $("feedback").textContent = `❌ Incorrect! Option ${res.correct_answer.toUpperCase()} was the correct answer.`;
+        $("feedback").textContent = `❌ Submitted. Moving to next question...`;
       }
       $("feedback").className = "feedback wrong";
     }
 
     setTimeout(() => {
       loadQuestion();
-    }, 1400);
+    }, 900);
 
   } catch (err) {
     $("feedback").textContent = err.message;
-    setTimeout(loadQuestion, 2000);
+    setTimeout(loadQuestion, 1500);
   }
 }
 
