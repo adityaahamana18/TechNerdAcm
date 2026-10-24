@@ -1862,115 +1862,214 @@ input:focus, textarea:focus, select:focus {
 }
 
 @media(max-width: 640px) {
-  .page {
-    width: 100%;
-    padding: 14px 12px 36px;
+  /* Mobile Container & Viewport Geometry */
+  body {
+    font-size: 14px;
+    line-height: 1.5;
   }
 
+  .page {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 12px 14px 32px !important;
+    overflow-x: hidden;
+  }
+
+  /* Compact Native App-Style Topbar (56px) */
   .topbar {
-    padding: 0 12px;
+    padding: 0 14px;
     height: 56px;
+    background: rgba(7, 11, 20, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(56, 189, 248, 0.14);
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
   .brand {
     font-size: 15px;
     gap: 8px;
   }
   .brand small { display: none; }
-  .brand-mark { width: 28px; height: 28px; font-size: 13px; }
-  .top-actions { gap: 6px; }
-  .admin-link { padding: 5px 9px; font-size: 10px; border-radius: 6px; }
+  .brand-mark { 
+    width: 28px; 
+    height: 28px; 
+    font-size: 13px; 
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+  }
+  .top-actions { gap: 8px; }
+  .admin-link { 
+    padding: 5px 10px; 
+    font-size: 10px; 
+    border-radius: 20px; 
+    font-weight: 700;
+  }
   
-  /* Hero on mobile */
+  /* Modern Hero Section - Bootstrap Lead Style */
   .hero {
-    padding: 12px 0 20px;
+    padding: 14px 0 18px;
+    text-align: center;
   }
   .hero-badge-pill {
     padding: 5px 12px;
-    font-size: 9.5px;
-    letter-spacing: 1px;
+    font-size: 9px;
+    letter-spacing: 1.2px;
     margin-bottom: 12px;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.22);
   }
   .hero h1 {
-    font-size: clamp(28px, 8.5vw, 36px);
-    line-height: 1.15;
-    letter-spacing: -0.5px;
-    margin-bottom: 10px;
+    font-size: clamp(30px, 8.8vw, 38px);
+    line-height: 1.12;
+    letter-spacing: -0.6px;
+    margin-bottom: 8px;
+    font-weight: 900;
   }
   .hero-tagline {
-    font-size: 11px;
-    letter-spacing: 1.2px;
+    font-size: 10.5px;
+    letter-spacing: 1.5px;
+    font-weight: 700;
   }
   .hero-tagline .dot {
     padding: 0 4px;
   }
   .hero-copy {
-    font-size: 13px;
-    line-height: 1.5;
-    margin-top: 10px;
-    padding: 0 6px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    margin-top: 8px;
+    padding: 0 4px;
+    color: #94a3b8;
   }
+
+  /* Bootstrap Card-Deck Capsule Row */
   .hero-live-stats-bar {
-    gap: 8px;
-    margin: 14px auto 0;
-    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    margin: 14px auto 0 !important;
+    width: 100% !important;
   }
   .stat-capsule {
-    flex: 1;
-    min-width: 90px;
-    padding: 6px 8px;
-    gap: 6px;
-    border-radius: 9px;
+    padding: 8px 6px !important;
+    border-radius: 10px !important;
+    background: rgba(14, 165, 233, 0.07) !important;
+    border: 1px solid rgba(56, 189, 248, 0.18) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 3px !important;
   }
   .capsule-icon {
     font-size: 14px;
   }
+  .capsule-text {
+    text-align: center !important;
+  }
   .capsule-text strong {
-    font-size: 10.5px;
+    font-size: 10px !important;
+    letter-spacing: 0.2px !important;
+    color: #ffffff !important;
   }
   .capsule-text small {
-    font-size: 7.5px;
+    font-size: 7.5px !important;
+    letter-spacing: 0.8px !important;
+    color: var(--cyan) !important;
   }
 
   .hero-tags {
-    gap: 6px;
+    gap: 5px;
     margin-top: 12px;
   }
   .hero-tag-item {
-    font-size: 9.5px;
-    padding: 5px 8px;
-    gap: 5px;
+    font-size: 9px;
+    padding: 4px 8px;
+    gap: 4px;
+    border-radius: 6px;
+    border-color: rgba(255, 255, 255, 0.08);
   }
 
-  /* Join card & Quiz card */
+  /* Polished Bootstrap Floating Glass Card (join-card) */
   .join-card {
-    padding: 20px 15px;
-    border-radius: 14px;
-    margin: 0 auto;
-    width: 100%;
+    padding: 22px 16px !important;
+    border-radius: 16px !important;
+    margin: 12px auto 0 !important;
+    width: 100% !important;
+    background: rgba(15, 23, 42, 0.85) !important;
+    border: 1px solid rgba(56, 189, 248, 0.24) !important;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
   }
   .join-card h2 {
-    font-size: 21px;
+    font-size: 20px;
     letter-spacing: -0.3px;
+    font-weight: 800;
+    margin-bottom: 4px;
   }
   .join-card .muted {
-    font-size: 12px;
-    line-height: 1.5;
+    font-size: 11.5px;
+    line-height: 1.45;
+  }
+  .auth-action-area {
+    margin-top: 16px;
   }
   .btn.google-btn {
-    padding: 12px 14px;
-    font-size: 12px;
+    padding: 13px 14px !important;
+    font-size: 12px !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    min-height: 46px;
   }
   .stack-form {
-    gap: 13px;
+    gap: 12px;
     margin-top: 14px;
   }
+  .stack-form label span {
+    font-size: 11px;
+    font-weight: 700;
+  }
   input, textarea, select {
-    padding: 11px 12px;
-    font-size: 13px;
+    padding: 12px 14px !important;
+    font-size: 13.5px !important;
+    border-radius: 10px !important;
+    min-height: 44px;
   }
   .btn {
-    padding: 12px 15px;
-    font-size: 11.5px;
+    padding: 12px 16px;
+    font-size: 12px;
+    border-radius: 10px;
+    min-height: 44px;
+  }
+  .start-quiz-btn {
+    padding: 14px !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.6px !important;
+  }
+
+  /* Bootstrap List-Group Style for Feature Grid on Mobile */
+  .feature-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    margin-top: 24px !important;
+  }
+  .feature-box {
+    padding: 14px 14px !important;
+    border-radius: 12px !important;
+    gap: 12px !important;
+    background: rgba(13, 20, 36, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+  .f-icon {
+    font-size: 22px !important;
+  }
+  .f-content b {
+    font-size: 13px !important;
+    margin-bottom: 2px !important;
+  }
+  .f-content p {
+    font-size: 11.5px !important;
+    line-height: 1.4 !important;
   }
 
   /* Quiz play screen on mobile */
@@ -1980,7 +2079,8 @@ input:focus, textarea:focus, select:focus {
   }
   .quiz-card {
     padding: 18px 14px;
-    border-radius: 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(56, 189, 248, 0.22);
   }
   .quiz-top {
     flex-wrap: wrap;
@@ -1992,15 +2092,15 @@ input:focus, textarea:focus, select:focus {
     letter-spacing: 0.8px;
   }
   .timer {
-    width: 54px;
-    height: 54px;
+    width: 52px;
+    height: 52px;
   }
   .timer small {
-    font-size: 7px;
+    font-size: 6.5px;
     letter-spacing: 0.5px;
   }
   .timer strong {
-    font-size: 17px;
+    font-size: 16px;
   }
   .progress-track {
     margin: 14px 0 16px;
@@ -2010,33 +2110,34 @@ input:focus, textarea:focus, select:focus {
     margin-bottom: 14px;
   }
   .question-count {
-    font-size: 10px;
+    font-size: 9.5px;
     letter-spacing: 1px;
     line-height: 1.4;
     display: block;
     margin-bottom: 4px;
   }
   .quiz-card h2 {
-    font-size: 16px;
-    line-height: 1.45;
+    font-size: 15.5px;
+    line-height: 1.42;
     margin-top: 4px;
     letter-spacing: -0.2px;
   }
   .options {
-    gap: 9px;
+    gap: 8px;
   }
   .option {
     padding: 12px 12px;
     gap: 10px;
-    font-size: 13px;
+    font-size: 12.5px;
     line-height: 1.4;
-    border-radius: 9px;
+    border-radius: 10px;
+    min-height: 48px;
   }
   .option-key {
     width: 26px;
     height: 26px;
     font-size: 10px;
-    border-radius: 5px;
+    border-radius: 6px;
   }
   .feedback {
     font-size: 12px;
@@ -2113,8 +2214,8 @@ input:focus, textarea:focus, select:focus {
     border-radius: 16px;
   }
   .dev-replica-avatar-wrap {
-    width: 90px;
-    height: 90px;
+    width: 88px;
+    height: 88px;
     padding: 3px;
     margin: 0 auto;
   }
@@ -2129,7 +2230,7 @@ input:focus, textarea:focus, select:focus {
     margin-bottom: 4px;
   }
   .dev-replica-name {
-    font-size: 21px;
+    font-size: 20px;
     letter-spacing: -0.3px;
     margin-bottom: 3px;
   }
@@ -2145,10 +2246,11 @@ input:focus, textarea:focus, select:focus {
     gap: 8px;
   }
   .dev-replica-btn {
-    padding: 8px 8px;
+    padding: 9px 8px;
     font-size: 11px;
     border-radius: 8px;
     justify-content: center;
+    min-height: 40px;
   }
 
   /* Footer on mobile */
