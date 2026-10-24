@@ -746,13 +746,22 @@ def admin_stage_control():
 @app.route("/admin/question-control", methods=["POST"])
 @admin_required
 def admin_question_control():
-    stage = request.form.get("stage")
-    action = request.form.get("action")
-    target_q = request.form.get("target_q")
+    # Supports JSON (AJAX from Live Control Popup) or Form POST
+    is_json = request.is_json
+    data = request.json if is_json else request.form
+
+    stage = data.get("stage")
+    action = data.get("action")
+    target_q = data.get("target_q")
 
     if stage in ("1", "2", "3"):
         with db() as c:
-            max_qs = c.execute("SELECT COUNT(*) n FROM questions WHERE stage=? AND active=1", (int(stage),)).fetchone()["n"] or 25
+            s_num = int(stage)
+            if s_num == 3:
+                max_qs = 5 # 5 questions per topic domain in Stage 3
+            else:
+                max_qs = c.execute("SELECT COUNT(*) n FROM questions WHERE stage=? AND active=1", (s_num,)).fetchone()["n"] or 25
+
             current_q = int(setting(c, f"stage{stage}_current_q", "1"))
 
             if action == "next":
@@ -768,9 +777,111 @@ def admin_question_control():
                 new_q = current_q
 
             set_setting(c, f"stage{stage}_current_q", str(new_q))
-            flash(f"Stage {stage}: Active question set to Question {new_q} (out of {max_qs}) for all participants.", "success")
+            msg = f"Stage {stage}: Active question set to Question {new_q} of {max_qs}."
+            if is_json:
+                return jsonify({"ok": True, "stage": s_num, "current_q": new_q, "total_qs": max_qs, "message": msg})
+            flash(msg, "success")
 
+    if is_json:
+        return jsonify({"ok": False, "error": "Invalid stage parameter"}), 400
     return redirect(url_for("dashboard"))
+
+# API for Question-Specific Leaderboard & Live Question Details
+@app.route("/api/admin/question-detail")
+@admin_required
+def api_question_detail():
+    stage_param = request.args.get("stage", "1").strip()
+    q_index_param = request.args.get("q_index") # 1-based index (e.g. Question 1, 2, ...)
+    topic_param = request.args.get("topic", "").strip()
+
+    try:
+        s_num = int(stage_param)
+    except ValueError:
+        s_num = 1
+
+    with db() as c:
+        # Determine current allowed question if not explicitly provided
+        if q_index_param:
+            try:
+                q_idx = int(q_index_param)
+            except ValueError:
+                q_idx = int(setting(c, f"stage{s_num}_current_q", "1"))
+        else:
+            q_idx = int(setting(c, f"stage{s_num}_current_q", "1"))
+
+        # Fetch questions for this stage
+        if s_num == 3:
+            # Stage 3 has topic specific questions
+            available_topics = [r["topic"] for r in c.execute("SELECT DISTINCT topic FROM questions WHERE stage=3 AND active=1").fetchall() if r["topic"]]
+            active_topic = topic_param if topic_param in available_topics else (available_topics[0] if available_topics else "Web Development")
+            stage_qs = c.execute("SELECT * FROM questions WHERE stage=3 AND topic=? AND active=1 ORDER BY id ASC", (active_topic,)).fetchall()
+            total_qs = len(stage_qs) or 5
+        else:
+            available_topics = []
+            active_topic = ""
+            stage_qs = c.execute("SELECT * FROM questions WHERE stage=? AND active=1 ORDER BY id ASC", (s_num,)).fetchall()
+            total_qs = len(stage_qs)
+
+        q_idx = max(1, min(total_qs, q_idx))
+        target_q = stage_qs[q_idx - 1] if stage_qs and (q_idx - 1) < len(stage_qs) else None
+
+        leaderboard_data = []
+        stats = {"correct": 0, "wrong": 0, "total": 0, "opt_a": 0, "opt_b": 0, "opt_c": 0, "opt_d": 0}
+
+        if target_q:
+            qid = target_q["id"]
+            # Fetch responses for this question sorted by correct DESC, speed (answered_at) ASC
+            rows = c.execute("""
+                SELECT p.id, p.name, p.email, p.team,
+                       r.choice, r.correct, r.points, r.answered_at
+                FROM responses r
+                JOIN participants p ON p.id = r.participant_id
+                WHERE r.question_id = ?
+                ORDER BY r.correct DESC, r.points DESC, r.answered_at ASC
+            """, (qid,)).fetchall()
+
+            for idx, r in enumerate(rows):
+                item = dict(r)
+                item["rank"] = idx + 1
+                ch = (r["choice"] or "").lower()
+                item["selected_text"] = target_q[ch] if ch in ("a", "b", "c", "d") else "Timeout / None"
+                leaderboard_data.append(item)
+                stats["total"] += 1
+                if r["correct"]:
+                    stats["correct"] += 1
+                else:
+                    stats["wrong"] += 1
+
+                ch = (r["choice"] or "").lower()
+                if ch in ("a", "b", "c", "d"):
+                    stats[f"opt_{ch}"] += 1
+
+        active_setting = setting(c, f"stage{s_num}_active", "0") == "1"
+        current_gate_q = int(setting(c, f"stage{s_num}_current_q", "1"))
+
+        return jsonify({
+            "stage": s_num,
+            "stage_active": active_setting,
+            "current_gate_q": current_gate_q,
+            "viewing_q_index": q_idx,
+            "total_qs": total_qs,
+            "active_topic": active_topic,
+            "available_topics": available_topics,
+            "question": {
+                "id": target_q["id"] if target_q else None,
+                "question": target_q["question"] if target_q else "No question found",
+                "a": target_q["a"] if target_q else "",
+                "b": target_q["b"] if target_q else "",
+                "c": target_q["c"] if target_q else "",
+                "d": target_q["d"] if target_q else "",
+                "answer": target_q["answer"] if target_q else "",
+                "points": target_q["points"] if target_q else 0,
+                "seconds": target_q["seconds"] if target_q else 25,
+                "topic": target_q["topic"] if target_q else ""
+            } if target_q else None,
+            "stats": stats,
+            "leaderboard": leaderboard_data
+        })
 
 @app.route("/api/admin/security-logs")
 @admin_required
