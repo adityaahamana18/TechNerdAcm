@@ -7,56 +7,6 @@ let tabSwitchCount = 0;
 let fullscreenExitCount = 0;
 let isQuizStarted = false;
 let isFullscreenPaused = false;
-let isScreenShareBlocked = false;
-let micMediaStream = null;
-let isMicActive = false;
-
-// Mandatory Microphone Acquisition & Lock
-async function enforceMicrophoneLock() {
-  try {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      throw new Error("Browser does not support media device capture.");
-    }
-    // Requests exclusive audio stream to lock microphone resource in Chrome
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false
-      },
-      video: false
-    });
-    micMediaStream = stream;
-    isMicActive = true;
-
-    const micBadge = $("micStatusBadge");
-    if (micBadge) {
-      micBadge.textContent = "🎙️ MIC ACTIVE";
-      micBadge.style.color = "var(--green)";
-      micBadge.style.borderColor = "rgba(16,185,129,0.4)";
-    }
-
-    // Monitor if microphone is accidentally disconnected or revoked
-    const audioTrack = stream.getAudioTracks()[0];
-    if (audioTrack) {
-      audioTrack.onended = () => {
-        isMicActive = false;
-        sendSecurityLog("MIC_DISCONNECTED", "Microphone access was disconnected or revoked");
-        showViolationWarning("⚠️ Microphone disconnected! Continuous microphone lock is required.");
-        if (micBadge) {
-          micBadge.textContent = "🎙️ MIC REVOKED";
-          micBadge.style.color = "var(--danger)";
-        }
-      };
-    }
-    return true;
-  } catch (err) {
-    console.error("Microphone Access Denied:", err);
-    sendSecurityLog("MIC_ACCESS_DENIED", err.message || "User denied microphone permissions");
-    alert("⚠️ MICROPHONE ACCESS REQUIRED!\n\nTo ensure fair proctoring and block external audio/Gemini tools, you must click 'Allow' for Microphone permission to proceed with the quiz.");
-    return false;
-  }
-}
 
 async function getJSON(url, options = {}) {
   const r = await fetch(url, options);
@@ -65,7 +15,7 @@ async function getJSON(url, options = {}) {
   return data;
 }
 
-// Security logging to backend
+// Security logging to backend (Admin panel me show hoga)
 async function sendSecurityLog(eventType, details) {
   try {
     await fetch("/api/security-log", {
@@ -80,6 +30,7 @@ async function sendSecurityLog(eventType, details) {
 
 function showViolationWarning(msg) {
   const banner = $("violationWarning");
+  if (!banner) return;
   $("violationMsg").textContent = msg;
   banner.style.display = "flex";
   setTimeout(() => { banner.classList.add("show"); }, 10);
@@ -87,6 +38,7 @@ function showViolationWarning(msg) {
 
 $("dismissWarningBtn").addEventListener("click", () => {
   const banner = $("violationWarning");
+  if (!banner) return;
   banner.classList.remove("show");
   setTimeout(() => { banner.style.display = "none"; }, 300);
 });
@@ -123,35 +75,30 @@ document.addEventListener("fullscreenchange", () => {
 
   if (isQuizStarted) {
     if (!isFs) {
-      // User exited fullscreen during the quiz
       isFullscreenPaused = true;
       fullscreenExitCount++;
       stopTimer();
 
-      // Show Fullscreen Lock Overlay
       const modal = $("fsModal");
       const title = $("fsModalTitle");
       const sub = $("fsModalSubtitle");
       const btn = $("enterFsBtn");
 
       if (title) title.textContent = "⚠️ Fullscreen Required!";
-      if (sub) sub.innerHTML = `<span style="color:var(--danger); font-weight:700;">Quiz is paused!</span> You exited fullscreen (${fullscreenExitCount} time(s)). You MUST re-enter fullscreen to resume your quiz.`;
-      if (btn) btn.textContent = "RE-ENTER FULLSCREEN TO RESUME ⛶";
+      if (sub) sub.innerHTML = `<span style="color:var(--danger); font-weight:700;">Quiz is paused!</span> You exited fullscreen (${fullscreenExitCount} time(s)). Click below to resume fullscreen.`;
+      if (btn) btn.textContent = "RE-ENTER FULLSCREEN ⛶";
 
       modal.style.display = "flex";
       modal.style.opacity = "1";
       modal.style.pointerEvents = "auto";
 
-      const msg = `Fullscreen mode exited (${fullscreenExitCount} time(s))! Quiz paused until fullscreen resumed.`;
-      showViolationWarning(msg);
+      showViolationWarning(`Fullscreen exited (${fullscreenExitCount} time(s)). Logged to Admin.`);
       sendSecurityLog("FULLSCREEN_EXIT", `Exited fullscreen mode. Total: ${fullscreenExitCount}`);
     } else {
-      // Re-entered fullscreen
       isFullscreenPaused = false;
       const modal = $("fsModal");
       if (modal) modal.style.display = "none";
       
-      // Resume timer if question active or refresh state
       if (currentQuestion && timeLeft > 0) {
         startTimer(timeLeft);
       } else {
@@ -161,153 +108,62 @@ document.addEventListener("fullscreenchange", () => {
   }
 });
 
-// Anti-Cheat Events
+// 1. Tab Switch Tracking (Logged to Admin Panel)
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && isQuizStarted) {
     tabSwitchCount++;
-    showViolationWarning(`Tab switch detected (${tabSwitchCount} time(s))!`);
-    sendSecurityLog("TAB_SWITCH", `User switched tab. Total: ${tabSwitchCount}`);
+    showViolationWarning(`Tab switch detected (${tabSwitchCount} time(s))! Logged to Admin.`);
+    sendSecurityLog("TAB_SWITCH", `User switched tab or minimized window. Total switches: ${tabSwitchCount}`);
   }
 });
 
-// Anti-Screenshare / Screen Recording Detection
-function triggerScreenshareBlock(reason = "Screenshare or capture detected") {
-  if (isScreenShareBlocked) return;
-  isScreenShareBlocked = true;
-  stopTimer();
-
-  const blocker = $("screenShareBlocker");
-  if (blocker) blocker.style.display = "flex";
-
-  const quizArea = $("quizContainer");
-  if (quizArea) quizArea.style.filter = "blur(18px) grayscale(80%)";
-
-  sendSecurityLog("SCREENSHARE_ATTEMPT", reason);
-}
-
-function resolveScreenshareBlock() {
-  if (!isScreenShareBlocked) return;
-  isScreenShareBlocked = false;
-
-  const blocker = $("screenShareBlocker");
-  if (blocker) blocker.style.display = "none";
-
-  const quizArea = $("quizContainer");
-  if (quizArea) quizArea.style.filter = "none";
-
-  if (currentQuestion && timeLeft > 0) {
-    startTimer(timeLeft);
-  }
-}
-
-// 1. Prevent Screen Capture API if triggered by apps
-if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
-  const originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
-  navigator.mediaDevices.getDisplayMedia = function() {
-    triggerScreenshareBlock("Browser screen-capture API invoked");
-    return Promise.reject(new DOMException("Screen sharing is restricted by Proctor policy.", "NotAllowedError"));
-  };
-}
-
-let isOverlayBlocked = false;
-
-function triggerOverlayAppBlock(reason = "Floating app or display overlay detected") {
-  if (isOverlayBlocked) return;
-  isOverlayBlocked = true;
-  stopTimer();
-
-  const blocker = $("overlayAppBlocker");
-  if (blocker) blocker.style.display = "flex";
-
-  const quizArea = $("quizContainer");
-  if (quizArea) quizArea.style.filter = "blur(24px) brightness(50%)";
-
-  sendSecurityLog("OVERLAY_APP_DETECTED", reason);
-  showViolationWarning("⚠️ Floating window or overlay detected! Quiz paused.");
-}
-
-function resolveOverlayAppBlock() {
-  if (!isOverlayBlocked) return;
-  isOverlayBlocked = false;
-
-  const blocker = $("overlayAppBlocker");
-  if (blocker) blocker.style.display = "none";
-
-  const quizArea = $("quizContainer");
-  if (quizArea) quizArea.style.filter = "none";
-
-  if (currentQuestion && timeLeft > 0) {
-    startTimer(timeLeft);
-  } else {
-    loadQuestion();
-  }
-}
-
-// 2. Strict Focus Loss & Display-Over-Other-Apps Detection
-window.addEventListener("blur", () => {
-  if (isQuizStarted) {
-    // When a floating bubble, Gemini overlay, or picture-in-picture is touched, window immediately loses focus
-    triggerOverlayAppBlock("Window focus stolen by external floating overlay/app");
-  }
-});
-
-// Periodic Heartbeat to check if document has primary window focus
-setInterval(() => {
-  if (isQuizStarted && !isFullscreenPaused) {
-    if (!document.hasFocus()) {
-      triggerOverlayAppBlock("Browser focus lost (possible floating window/overlay active)");
-    }
-  }
-}, 1000);
-
-// Close overlay handler
-document.addEventListener("DOMContentLoaded", () => {
-  const btn = $("resumeFromOverlayBtn");
-  if (btn) {
-    btn.addEventListener("click", async () => {
-      await requestFullScreen();
-      window.focus();
-      resolveOverlayAppBlock();
-    });
-  }
-});
-
-// 3. Block Developer Tools & Screenshot Shortcuts
+// 2. Block Screenshots & Snipping Tool Shortcuts
 window.addEventListener("keydown", (e) => {
   if (!isQuizStarted) return;
 
-  // PrintScreen Key
+  // PrintScreen
   if (e.key === "PrintScreen" || e.keyCode === 44) {
     e.preventDefault();
-    triggerScreenshareBlock("PrintScreen / Screenshot captured");
+    showViolationWarning("⚠️ Screenshots are prohibited during the quiz!");
+    sendSecurityLog("SCREENSHOT_ATTEMPT", "PrintScreen captured attempt");
     return false;
   }
 
-  // Windows Key + Shift + S (Snipping Tool) or Alt + PrtScn
+  // Windows + Shift + S (Snipping Tool) or Alt + PrtScn
   if ((e.shiftKey && (e.metaKey || e.key === "Meta") && e.key.toLowerCase() === "s") || (e.altKey && e.key === "PrintScreen")) {
     e.preventDefault();
-    triggerScreenshareBlock("Screen snippet or capture shortcut attempted");
+    showViolationWarning("⚠️ Snipping tool is blocked during the quiz!");
+    sendSecurityLog("SCREENSHOT_ATTEMPT", "Snipping tool shortcut attempted");
     return false;
   }
 
-  // Developer Tools: F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+  // F12 / DevTools
   if (
     e.key === "F12" ||
     (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "i" || e.key === "J" || e.key === "j" || e.key === "C" || e.key === "c")) ||
     (e.ctrlKey && (e.key === "U" || e.key === "u"))
   ) {
     e.preventDefault();
+    showViolationWarning("Developer tools are disabled!");
     sendSecurityLog("DEVTOOLS_ATTEMPT", `Attempted key: ${e.key}`);
-    showViolationWarning("Developer tools and inspect element are disabled!");
     return false;
   }
 });
 
+// 3. Block Copy, Cut, Paste & Right Click
 document.addEventListener("copy", (e) => {
   if (isQuizStarted) {
     e.preventDefault();
-    showViolationWarning("Copying text is restricted during the quiz!");
-    sendSecurityLog("COPY_ATTEMPT", "Copy attempted");
+    showViolationWarning("Copying question text is disabled!");
+    sendSecurityLog("COPY_ATTEMPT", "User tried copying text");
+  }
+});
+
+document.addEventListener("cut", (e) => {
+  if (isQuizStarted) {
+    e.preventDefault();
+    showViolationWarning("Cutting text is disabled!");
+    sendSecurityLog("CUT_ATTEMPT", "User tried cutting text");
   }
 });
 
@@ -315,14 +171,14 @@ document.addEventListener("paste", (e) => {
   if (isQuizStarted) {
     e.preventDefault();
     showViolationWarning("Pasting is disabled in the quiz arena!");
-    sendSecurityLog("PASTE_ATTEMPT", "Paste attempted");
+    sendSecurityLog("PASTE_ATTEMPT", "User tried pasting text");
   }
 });
 
 document.addEventListener("contextmenu", (e) => {
   if (isQuizStarted) {
     e.preventDefault();
-    showViolationWarning("Right-click context menu is disabled for integrity!");
+    showViolationWarning("Right-click context menu is disabled!");
     sendSecurityLog("CONTEXT_MENU", "Right-click attempted");
   }
 });
@@ -372,96 +228,14 @@ function handleTimeout() {
   submitAnswer("timeout", null, true);
 }
 
-// Anti-AI / Anti-OCR Canvas Renderer (Defeats Gemini Live Vision / Screen Readers)
-function renderAntiOcrQuestion(text) {
-  const canvas = $("antiOcrCanvas");
-  const wrapper = $("canvasQuestionWrapper");
-  if (!canvas || !wrapper) return;
-
-  const ctx = canvas.getContext("2d");
-  const width = Math.min(840, window.innerWidth - 60);
-  
-  // Word wrap calculation
-  ctx.font = "bold 20px 'Plus Jakarta Sans', system-ui, sans-serif";
-  const words = text.split(" ");
-  let lines = [];
-  let currentLine = words[0];
-
-  for (let i = 1; i < words.length; i++) {
-    const word = words[i];
-    const testLine = currentLine + " " + word;
-    if (ctx.measureText(testLine).width < width - 60) {
-      currentLine = testLine;
-    } else {
-      lines.push(currentLine);
-      currentLine = word;
-    }
-  }
-  lines.push(currentLine);
-
-  const lineHeight = 32;
-  const height = Math.max(120, lines.length * lineHeight + 48);
-
-  // High DPI scaling
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = width * dpr;
-  canvas.height = height * dpr;
-  canvas.style.width = width + "px";
-  canvas.style.height = height + "px";
-  ctx.scale(dpr, dpr);
-
-  // Background
-  const gradient = ctx.createLinearGradient(0, 0, width, height);
-  gradient.addColorStop(0, "#0c1527");
-  gradient.addColorStop(1, "#111c35");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
-
-  // Subtle cryptographic micro-noise grid (Confuses Gemini / OCR Vision Models)
-  ctx.strokeStyle = "rgba(56, 189, 248, 0.04)";
-  ctx.lineWidth = 1;
-  for (let x = 0; x < width; x += 16) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, height);
-    ctx.stroke();
-  }
-  for (let y = 0; y < height; y += 16) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(width, y);
-    ctx.stroke();
-  }
-
-  // Watermark micro-dots
-  for (let i = 0; i < 40; i++) {
-    ctx.fillStyle = "rgba(56, 189, 248, 0.06)";
-    ctx.beginPath();
-    ctx.arc((i * 37) % width, (i * 23) % height, 1.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Draw Text with slight contrast glow
-  ctx.font = "bold 20px 'Plus Jakarta Sans', system-ui, sans-serif";
-  ctx.fillStyle = "#f8fafc";
-  ctx.shadowColor = "rgba(0,0,0,0.8)";
-  ctx.shadowBlur = 4;
-
-  lines.forEach((line, index) => {
-    ctx.fillText(line, 24, 38 + (index * lineHeight));
-  });
-
-  wrapper.style.display = "block";
-  $("questionText").style.display = "none"; // Hide raw HTML text to defeat DOM-scraping AI
-}
+// 3-Stage Smart Quiz Loader
 async function loadQuestion() {
   try {
     const data = await getJSON("/api/quiz");
     
-    // Update score
     $("playerScore").textContent = `${data.current_score || 0} PTS`;
     
-    // 1. Topic Selection Screen (e.g., Stage 3 or any topic-gated stage)
+    // 1. Stage 3 Topic Selection Screen
     if (data.status === "topic_selection" || data.status === "stage3_topic_selection") {
       stopTimer();
       isQuizActive = false;
@@ -492,19 +266,13 @@ async function loadQuestion() {
 
       topicsHtml += `</div></div>`;
       $("options").innerHTML = topicsHtml;
-      const cWrap = $("canvasQuestionWrapper");
-      if (cWrap) cWrap.style.display = "none";
-      $("questionText").style.display = "block";
       return;
     }
 
-    // 2. All 3 Stages Completed Screen
+    // 2. All Stages Completed Screen
     if (data.status === "completed") {
       stopTimer();
       isQuizActive = false;
-      const cWrap = $("canvasQuestionWrapper");
-      if (cWrap) cWrap.style.display = "none";
-      $("questionText").style.display = "block";
       $("statusPill").textContent = "ALL STAGES COMPLETED";
       $("roundLabel").textContent = "QUIZ CONQUERED";
       $("progressBar").style.width = "100%";
@@ -526,7 +294,7 @@ async function loadQuestion() {
       return;
     }
 
-    // 3. Question In Progress (Stage 1, 2, or 3)
+    // 3. Question In Progress
     const q = data.question;
     if (!q) {
       $("feedback").textContent = data.message || "No questions found for this stage.";
@@ -539,16 +307,12 @@ async function loadQuestion() {
     $("statusPill").textContent = `STAGE ${data.stage} ACTIVE`;
     $("roundLabel").textContent = data.stage_title;
     
-    // Smooth multi-stage progress computation
     let baseProg = (data.stage - 1) * 33.3;
     let stageProg = ((data.stage_index - 1) / data.stage_total) * 33.3;
     $("progressBar").style.width = `${Math.min(100, baseProg + stageProg)}%`;
     
     $("questionCount").textContent = `${data.stage_title} · Q${data.stage_index}/${data.stage_total} (${q.points} PTS)`;
-    
-    // Render as Anti-OCR protected canvas to prevent Gemini AI screenshare reading
-    renderAntiOcrQuestion(q.question);
-    
+    $("questionText").textContent = q.question;
     $("feedback").textContent = "";
     $("feedback").className = "feedback";
 
@@ -639,31 +403,18 @@ async function submitAnswer(choice, clickedBtn, isTimeout = false) {
   }
 }
 
-// Fullscreen & Microphone Modal Activation
+// Start Quiz Button
 $("enterFsBtn").addEventListener("click", async () => {
-  // 1. Mandatory Microphone Lock
-  if (!isMicActive) {
-    const micGranted = await enforceMicrophoneLock();
-    if (!micGranted) {
-      return; // Do not start quiz without microphone lock
-    }
-  }
-
-  // 2. Fullscreen Enforcement
   await requestFullScreen();
   $("fsModal").style.display = "none";
   isQuizStarted = true;
   isFullscreenPaused = false;
   
-  // Always trigger loadQuestion or refresh active question
   if (!currentQuestion) {
     loadQuestion();
+  } else if (timeLeft > 0) {
+    startTimer(timeLeft);
   } else {
-    // If returning to an existing question
-    if (timeLeft > 0) {
-      startTimer(timeLeft);
-    } else {
-      loadQuestion();
-    }
+    loadQuestion();
   }
 });

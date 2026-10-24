@@ -7,19 +7,17 @@
     <div class="section-kicker" style="text-align: center; margin-bottom: 6px;">TECHNERD PROCTOR SYSTEM</div>
     <h2 id="fsModalTitle" style="font-family:'Space Grotesk',sans-serif; font-size:26px; margin-bottom:12px; text-align:center;">Enter Quiz Arena</h2>
     <p id="fsModalSubtitle" class="muted" style="margin-bottom:20px; text-align:center; font-size:14px;">
-      To ensure absolute fairness, this technical round is monitored in <strong>fullscreen proctored mode</strong>.
+      To ensure fair technical evaluation, this quiz runs in <strong>fullscreen proctored mode</strong>.
     </p>
     <ul class="security-rules-list">
-      <li><span>🔒</span> <strong>Fullscreen Enforced:</strong> Keep arena fullscreen throughout the quiz.</li>
-      <li><span>🚫</span> <strong>Overlay / Floating Apps Blocked:</strong> Floating bubbles, Gemini overlay, and display-over-other-apps are forbidden. If an overlay appears, the quiz will instantly freeze.</li>
-      <li><span>🎙️</span> <strong>Microphone Lock:</strong> Microphone access is enforced to lock audio hardware and prevent background voice-assistants / Gemini Live calls.</li>
-      <li><span>🚫</span> <strong>Screenshare Prohibited:</strong> Screen-sharing, screen recording, and dual monitors are blocked.</li>
-      <li><span>⚠️</span> <strong>Tab Tracking:</strong> Switching tabs, windows, or minimizing will trigger proctor alerts.</li>
-      <li><span>🛡️</span> <strong>Integrity Lock:</strong> Copy, paste, developer tools, and right-clicks are disabled.</li>
+      <li><span>🔒</span> <strong>Fullscreen Arena:</strong> Stay in fullscreen mode for the best quiz experience.</li>
+      <li><span>🚫</span> <strong>No Copy / Paste:</strong> Text copying and right-click menus are disabled.</li>
+      <li><span>📸</span> <strong>No Screenshots:</strong> Screenshot shortcuts and capturing tools are blocked.</li>
+      <li><span>⚠️</span> <strong>Tab Tracking:</strong> Tab switches and window minimizations are logged to Admin.</li>
       <li><span>⚡</span> <strong>Live Auto-Scoring:</strong> Immediate server-verified evaluation on each response.</li>
     </ul>
     <button id="enterFsBtn" class="btn primary full" style="margin-top:22px; padding:15px; font-size:12px;">
-      ENTER FULLSCREEN & RESUME QUIZ ⛶
+      ENTER FULLSCREEN & START QUIZ ⛶
     </button>
   </div>
 </div>
@@ -28,44 +26,10 @@
 <div id="violationWarning" class="violation-banner" style="display:none;">
   <span class="warning-icon">⚠️</span>
   <div>
-    <strong>Security Alert:</strong> <span id="violationMsg">Suspicious activity detected!</span>
-    <small style="display:block; opacity:0.9; margin-top:2px;">This violation has been logged to the Admin Control Room.</small>
+    <strong>Security Notice:</strong> <span id="violationMsg">Suspicious activity detected!</span>
+    <small style="display:block; opacity:0.9; margin-top:2px;">Event has been logged to Admin Control Room.</small>
   </div>
   <button id="dismissWarningBtn" class="btn ghost" style="padding:6px 14px; font-size:10px; margin-left:auto;">DISMISS</button>
-</div>
-
-<!-- Floating App / Display Over Other Apps Violation Overlay -->
-<div id="overlayAppBlocker" class="security-modal-overlay" style="display:none; z-index:9999999; backdrop-filter:blur(30px); background:rgba(7,11,20,0.98);">
-  <div class="security-modal panel" style="border-color:var(--danger); box-shadow:0 0 60px rgba(239,68,68,0.4); text-align:center;">
-    <div style="font-size: 52px; margin-bottom: 14px; animation: pulse 1.5s infinite;">🪟</div>
-    <div class="section-kicker" style="color:var(--danger); margin-bottom: 6px;">FLOATING OVERLAY DETECTED</div>
-    <h2 style="font-family:'Space Grotesk',sans-serif; font-size:24px; color:#fda4af; margin-bottom:12px;">Display Over Other Apps Prohibited!</h2>
-    <p class="muted" style="margin-bottom:18px; font-size:14px; line-height:1.6;">
-      An external floating overlay window or assistant (Gemini overlay, floating ball, picture-in-picture, or split window) was detected stealing browser focus.
-      <br><br>
-      <strong style="color:#ffffff;">The quiz is paused and blurred. Close or disable all floating overlays and click back into the arena to resume.</strong>
-    </p>
-    <div style="font-size:12px; color:var(--danger); font-weight:700; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); padding:10px; border-radius:8px;">
-      ⚠️ Violation has been transmitted to Admin Proctor logs.
-    </div>
-    <button id="resumeFromOverlayBtn" class="btn primary" style="margin-top:20px; padding:12px 24px; font-size:12px;">
-      CLOSE OVERLAY & RESUME QUIZ ⛶
-    </button>
-  </div>
-</div>
-  <div class="security-modal panel" style="border-color:var(--danger); box-shadow:0 0 50px rgba(239,68,68,0.3); text-align:center;">
-    <div style="font-size: 52px; margin-bottom: 14px; animation: pulse 1.5s infinite;">🚫</div>
-    <div class="section-kicker" style="color:var(--danger); margin-bottom: 6px;">PROCTOR SECURITY LOCK</div>
-    <h2 style="font-family:'Space Grotesk',sans-serif; font-size:24px; color:#fda4af; margin-bottom:12px;">Screenshare / Recording Detected!</h2>
-    <p class="muted" style="margin-bottom:18px; font-size:14px; line-height:1.6;">
-      Screen sharing, screen recording, or capture tools (Google Meet, Discord, Zoom, OBS, etc.) are strictly prohibited during this event.
-      <br><br>
-      <strong style="color:#ffffff;">The quiz is paused and blurred. Stop screen sharing immediately to resume.</strong>
-    </p>
-    <div style="font-size:12px; color:var(--danger); font-weight:700; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); padding:10px; border-radius:8px;">
-      ⚠️ This incident has been logged with your student name to the Admin Proctor Dashboard.
-    </div>
-  </div>
 </div>
 
 <div class="play-layout play-layout-single" id="quizContainer">
@@ -83,7 +47,6 @@
      <div style="display:flex; align-items:center; gap:10px;">
        <span class="pill" id="statusPill">PROCTORED</span>
        <span class="fs-indicator" id="fsStatusBadge" title="Fullscreen status">⛶ FULLSCREEN</span>
-       <span class="fs-indicator" id="micStatusBadge" style="border-color:rgba(16,185,129,0.3); background:rgba(16,185,129,0.08); color:var(--green);" title="Microphone Lock status">🎙️ MIC LOCKED</span>
      </div>
      <div class="timer"><small>SECONDS</small><strong id="timer">--</strong></div>
    </div>
@@ -93,11 +56,6 @@
    <div class="question-header">
      <span class="question-count" id="questionCount">LOADING QUESTION…</span>
      <h2 id="questionText">Preparing your quiz questions…</h2>
-   </div>
-
-   <!-- Dynamic Anti-OCR / Anti-AI Canvas (Renders question as noise-protected canvas to defeat Gemini Live OCR) -->
-   <div id="canvasQuestionWrapper" style="display:none; margin-bottom:24px; text-align:center;">
-     <canvas id="antiOcrCanvas" style="max-width:100%; height:auto; border-radius:12px; border:1px solid rgba(56,189,248,0.25); box-shadow:0 8px 24px rgba(0,0,0,0.4);"></canvas>
    </div>
 
    <div class="options" id="options"></div>
