@@ -175,7 +175,10 @@ def init_db():
             ]
             c.executemany("INSERT INTO questions(stage, topic, question, a, b, c, d, answer, points, seconds) VALUES(?,?,?,?,?,?,?,?,?,?)", sample_questions)
 
-ADMIN_EMAILS = {"adityaahamana18@gmail.com"}
+ADMIN_EMAILS = {
+    "adityaahamana18@gmail.com",
+    "25cb1mr81@mitsgwl.ac.in"
+}
 
 def admin_required(fn):
     @wraps(fn)
