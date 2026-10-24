@@ -57,24 +57,27 @@
 <header class="topbar">
   <a class="brand" href="{{ url_for('home') }}">
     <span class="brand-mark">⌁</span>
-    <span>TECH<span class="gradient-text">NERD</span><small>TECH PULSE 2026</small></span>
+    <span class="brand-text">TECH<span class="gradient-text">NERD</span><small class="brand-sub">TECH PULSE 2026</small></span>
   </a>
 
   <div class="top-actions">
     {% if session.get('participant_name') %}
-      <span style="display:inline-flex;align-items:center;gap:8px;color:#a0e4ff;font-size:12px;font-weight:700;">
+      <div class="user-pill-mobile">
         {% if session.get('participant_photo') %}
-          <img src="{{ session.get('participant_photo') }}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid var(--cyan);">
+          <img src="{{ session.get('participant_photo') }}" class="user-pill-avatar">
         {% endif %}
-        {{ session.get('participant_name') }}
-      </span>
-      <a href="{{ url_for('logout') }}" style="color:#ff8fb2;font-size:10px;font-weight:700;margin-left:5px;border:1px solid rgba(244,63,94,0.3);background:rgba(225,29,72,0.1);padding:6px 10px;border-radius:6px;transition:0.2s;">LOGOUT</a>
+        <span class="user-pill-name">{{ session.get('participant_name').split(' ')[0] }}</span>
+      </div>
+      <a href="{{ url_for('logout') }}" class="logout-btn-header">EXIT</a>
     {% else %}
-      <span class="live-dot"></span><span class="hide-mobile" style="font-weight:600;letter-spacing:1.5px;">LIVE TECHNICAL QUIZ</span>
+      <div class="live-status-pill hide-on-mobile">
+        <span class="live-dot"></span>
+        <span>LIVE QUIZ</span>
+      </div>
     {% endif %}
 
     {% if session.get('admin_email') %}
-      <a href="{{ url_for('dashboard') }}" class="admin-link" style="border-color:var(--cyan);background:rgba(56,189,248,0.15);color:var(--cyan);">ADMIN DASHBOARD ↗</a>
+      <a href="{{ url_for('dashboard') }}" class="admin-link active-admin">ADMIN ↗</a>
     {% else %}
       <a href="{{ url_for('admin_login') }}" class="admin-link">ADMIN ↗</a>
     {% endif %}
