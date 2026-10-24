@@ -599,3 +599,9 @@ def admin_participants():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host="127.0.0.1", port=5000)
+else:
+    # Auto-initialize database schema when running under production gunicorn
+    try:
+        init_db()
+    except Exception as e:
+        print(">>> [INIT_DB ERROR on Gunicorn startup]:", e)

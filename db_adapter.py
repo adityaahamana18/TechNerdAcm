@@ -20,6 +20,18 @@ class CursorWrapper:
         self.cur = cur
         self.is_pg = is_pg
 
+    @property
+    def lastrowid(self):
+        if self.is_pg:
+            try:
+                row = self.cur.fetchone()
+                if row:
+                    return row.get("id") if isinstance(row, dict) else row[0]
+            except Exception:
+                pass
+            return None
+        return getattr(self.cur, "lastrowid", None)
+
     def fetchone(self):
         r = self.cur.fetchone()
         if r is None:
@@ -52,6 +64,9 @@ class DBConnectionWrapper:
         if self.is_pg:
             # Convert SQLite '?' parameter placeholders to PostgreSQL '%s'
             pg_sql = sql.replace("?", "%s")
+            # If inserting and no returning clause, add RETURNING id for lastrowid
+            if pg_sql.strip().upper().startswith("INSERT INTO") and "RETURNING" not in pg_sql.upper():
+                pg_sql += " RETURNING id"
             cur = self.conn.cursor(cursor_factory=RealDictCursor)
             cur.execute(pg_sql, params)
             return CursorWrapper(cur, is_pg=True)
