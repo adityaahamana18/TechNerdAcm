@@ -157,43 +157,53 @@ def init_db():
 
         c.execute("INSERT INTO settings(key,value) VALUES('event_code','TECH2026') ON CONFLICT(key) DO NOTHING")
 
-        # Auto-seed base questions if questions table is fresh/empty
-        q_count_row = c.execute("SELECT COUNT(*) as n FROM questions").fetchone()
-        q_count = q_count_row["n"] if isinstance(q_count_row, dict) else q_count_row[0]
-        if q_count == 0:
-            sample_questions = [
-                # Stage 1: Python
+        # Ensure Stage 1 has all 25 official questions in the DB
+        stage1_count_row = c.execute("SELECT COUNT(*) as n FROM questions WHERE stage=1").fetchone()
+        stage1_count = stage1_count_row["n"] if isinstance(stage1_count_row, dict) else stage1_count_row[0]
+        
+        # If Stage 1 has old sample questions (count < 25), sync full 25 questions
+        if stage1_count < 25:
+            c.execute("DELETE FROM questions WHERE stage=1")
+            stage1_official_questions = [
+                # Python
                 (1, "Python", "Which keyword is used to define a function in Python?", "function", "def", "fun", "define", "b", 10, 25),
                 (1, "Python", "What will print(type([])) output?", "<class 'tuple'>", "<class 'dict'>", "<class 'list'>", "<class 'set'>", "c", 10, 25),
                 (1, "Python", "Which of these data types is immutable in Python?", "list", "dict", "set", "tuple", "d", 10, 25),
                 (1, "Python", "Which symbol is used for a single-line comment in Python?", "//", "#", "/*", "--", "b", 10, 25),
                 (1, "Python", "What is the correct file extension for Python files?", ".pt", ".pyt", ".py", ".python", "c", 10, 25),
-                # Stage 1: C++
+                # C++
                 (1, "C++", "Which object is used to print output in C++?", "print", "cout", "echo", "printf()", "b", 10, 25),
                 (1, "C++", "Who created C++?", "Dennis Ritchie", "James Gosling", "Guido van Rossum", "Bjarne Stroustrup", "d", 10, 25),
                 (1, "C++", "Which of these is NOT a valid C++ data type?", "int", "float", "real", "char", "c", 10, 25),
                 (1, "C++", "Which operator is used to access a member through a pointer in C++?", ".", "->", "::", "&", "b", 10, 25),
                 (1, "C++", "What is the file extension of a C++ source file?", ".cpp", ".cp", ".c++x", ".cplus", "a", 10, 25),
-                # Stage 1: Git & GitHub
+                # Git & GitHub
                 (1, "Git & GitHub", "Which command is used to copy a remote repository to your local machine?", "git copy", "git pull", "git clone", "git fetch", "c", 10, 25),
                 (1, "Git & GitHub", "What is Git?", "A programming language", "A distributed version control system", "A web browser", "A database", "b", 10, 25),
                 (1, "Git & GitHub", "What does git add . do?", "Commits all changes", "Deletes all files", "Pushes code to GitHub", "Stages all changes in the current directory", "d", 10, 25),
                 (1, "Git & GitHub", "Which command creates a new branch and switches to it?", "git branch -d new", "git checkout -b new", "git merge new", "git switch -x new", "b", 10, 25),
                 (1, "Git & GitHub", "GitHub is mainly used for:", "Hosting code repositories and collaboration", "Designing graphics", "Editing videos", "Sending emails", "a", 10, 25),
-                # Stage 1: Web Development
+                # Web Development
                 (1, "Web Development", "What does HTML stand for?", "HyperText Markup Language", "HighText Machine Language", "HyperTool Multi Language", "Home Text Markup Language", "a", 10, 25),
                 (1, "Web Development", "Which technology is used to style web pages?", "HTML", "CSS", "SQL", "PHP", "b", 10, 25),
                 (1, "Web Development", "Which HTML tag creates the largest heading?", "<h6>", "<head>", "<h1>", "<heading>", "c", 10, 25),
                 (1, "Web Development", "Which JavaScript keyword declares a block-scoped variable?", "var", "let", "int", "dim", "b", 10, 25),
                 (1, "Web Development", "What does the HTTP status code 404 mean?", "Server error", "Success", "Unauthorized", "Not Found", "d", 10, 25),
-                # Stage 1: LinkedIn
+                # LinkedIn
                 (1, "LinkedIn", "LinkedIn is mainly used for:", "Professional networking", "Online gaming", "Photo editing", "Music streaming", "a", 10, 25),
                 (1, "LinkedIn", "Who is the co-founder of LinkedIn?", "Mark Zuckerberg", "Reid Hoffman", "Jack Dorsey", "Elon Musk", "b", 10, 25),
                 (1, "LinkedIn", "Which pair of platforms is owned by Microsoft?", "Instagram and WhatsApp", "YouTube and Gmail", "LinkedIn and GitHub", "Twitter and Reddit", "c", 10, 25),
-                # Stage 1: General Programming
+                # General Programming
                 (1, "General Programming", "Which of the following is NOT a programming language?", "Rust", "Java", "Python", "Linux", "d", 10, 25),
-                (1, "General Programming", "What does IDE stand for?", "Internal Debug Engine", "Integrated Development Environment", "Interactive Design Editor", "Internet Data Exchange", "b", 10, 25),
+                (1, "General Programming", "What does IDE stand for?", "Internal Debug Engine", "Integrated Development Environment", "Interactive Design Editor", "Internet Data Exchange", "b", 10, 25)
+            ]
+            c.executemany("INSERT INTO questions(stage, topic, question, a, b, c, d, answer, points, seconds) VALUES(?,?,?,?,?,?,?,?,?,?)", stage1_official_questions)
 
+        # Auto-seed base questions for stage 2 & 3 if empty
+        q_count_row = c.execute("SELECT COUNT(*) as n FROM questions").fetchone()
+        q_count = q_count_row["n"] if isinstance(q_count_row, dict) else q_count_row[0]
+        if q_count <= 25:
+            remaining_samples = [
                 # Stage 2: Core Tech
                 (2, "Core Tech", "Which protocol is used for secure communication over the web?", "HTTP", "FTP", "HTTPS", "SMTP", "c", 15, 25),
                 (2, "Core Tech", "What component in an OS manages hardware resources and processes?", "Compiler", "Kernel", "Linker", "Shell", "b", 15, 25),
@@ -206,7 +216,7 @@ def init_db():
                 (3, "Cybersecurity & Crypto", "Which encryption type uses a pair of public and private keys?", "Symmetric", "Asymmetric", "Hashing", "Obfuscation", "b", 20, 30),
                 (3, "Cybersecurity & Crypto", "What attack involves overwhelming a network/server with fake traffic?", "SQL Injection", "DDoS", "Phishing", "Cross-Site Scripting", "b", 20, 30)
             ]
-            c.executemany("INSERT INTO questions(stage, topic, question, a, b, c, d, answer, points, seconds) VALUES(?,?,?,?,?,?,?,?,?,?)", sample_questions)
+            c.executemany("INSERT INTO questions(stage, topic, question, a, b, c, d, answer, points, seconds) VALUES(?,?,?,?,?,?,?,?,?,?)", remaining_samples)
 
 ADMIN_EMAILS = {
     "adityaahamana18@gmail.com",
