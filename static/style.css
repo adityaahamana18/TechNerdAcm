@@ -1117,8 +1117,8 @@ input:focus, textarea:focus, select:focus {
   position: fixed;
   inset: 0;
   background: rgba(7, 11, 20, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1127,32 +1127,120 @@ input:focus, textarea:focus, select:focus {
 }
 
 .security-modal {
-  max-width: 460px;
+  max-width: 500px;
   width: 100%;
-  padding: 34px 30px;
+  padding: 38px 34px;
   text-align: center;
-  box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 40px rgba(56, 189, 248, 0.12);
+  box-shadow: 0 25px 60px rgba(0,0,0,0.85), 0 0 50px rgba(56, 189, 248, 0.15);
   animation: slideUp 0.4s ease;
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(13, 20, 36, 0.98), rgba(16, 24, 45, 0.96));
+}
+
+.enter-arena-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.enter-arena-icon-wrap {
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.05));
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.25);
+}
+
+.enter-arena-shield {
+  font-size: 34px;
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.6));
+}
+
+.enter-arena-kicker {
+  text-align: center;
+  margin-bottom: 6px;
+  font-size: 10.5px;
+  letter-spacing: 1.8px;
+  color: var(--cyan);
+}
+
+.enter-arena-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(24px, 3.5vw, 28px);
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 8px;
+  text-align: center;
+  letter-spacing: -0.5px;
+}
+
+.enter-arena-sub {
+  color: #94a3b8;
+  text-align: center;
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin-bottom: 22px;
+  max-width: 420px;
+}
+
+.security-rules-box {
+  width: 100%;
+  background: rgba(7, 11, 20, 0.65);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 22px;
 }
 
 .security-rules-list {
   list-style: none;
-  text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  background: rgba(14, 165, 233, 0.06);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px 20px;
-  font-size: 13px;
-  color: var(--text-secondary);
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  text-align: left;
 }
 
 .security-rules-list li {
   display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  line-height: 1.45;
+}
+
+.rule-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.rule-text {
+  font-size: 12.5px;
+  color: #cbd5e1;
+}
+
+.rule-text strong {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.enter-arena-btn {
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
+  padding: 15px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  border-radius: 10px;
+  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.45);
 }
 
 .violation-banner {

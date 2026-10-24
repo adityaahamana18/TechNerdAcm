@@ -2,22 +2,45 @@
 {% block content %}
 <!-- Fullscreen Mode Prompt Modal -->
 <div id="fsModal" class="security-modal-overlay">
-  <div class="security-modal panel">
-    <div style="font-size: 42px; margin-bottom: 12px; filter: drop-shadow(0 0 16px rgba(56,189,248,0.5));">🛡️</div>
-    <div class="section-kicker" style="text-align: center; margin-bottom: 6px;">TECHNERD PROCTOR SYSTEM</div>
-    <h2 id="fsModalTitle" style="font-family:'Space Grotesk',sans-serif; font-size:26px; margin-bottom:12px; text-align:center;">Enter Quiz Arena</h2>
-    <p id="fsModalSubtitle" class="muted" style="margin-bottom:20px; text-align:center; font-size:14px;">
+  <div class="security-modal panel enter-arena-card">
+    <div class="enter-arena-icon-wrap">
+      <div class="enter-arena-shield">🛡️</div>
+    </div>
+    
+    <div class="section-kicker enter-arena-kicker">TECHNERD PROCTOR SYSTEM</div>
+    <h2 id="fsModalTitle" class="enter-arena-title">Enter Quiz Arena</h2>
+    <p id="fsModalSubtitle" class="enter-arena-sub">
       To ensure fair technical evaluation, this quiz runs in <strong>fullscreen proctored mode</strong>.
     </p>
-    <ul class="security-rules-list">
-      <li><span>🔒</span> <strong>Fullscreen Arena:</strong> Stay in fullscreen mode for the best quiz experience.</li>
-      <li><span>🚫</span> <strong>No Copy / Paste:</strong> Text copying and right-click menus are disabled.</li>
-      <li><span>📸</span> <strong>No Screenshots:</strong> Screenshot shortcuts and capturing tools are blocked.</li>
-      <li><span>⚠️</span> <strong>Tab Tracking:</strong> Tab switches and window minimizations are logged to Admin.</li>
-      <li><span>⚡</span> <strong>Live Auto-Scoring:</strong> Immediate server-verified evaluation on each response.</li>
-    </ul>
-    <button id="enterFsBtn" class="btn primary full" style="margin-top:22px; padding:15px; font-size:12px;">
-      ENTER FULLSCREEN & START QUIZ ⛶
+
+    <div class="security-rules-box">
+      <ul class="security-rules-list">
+        <li>
+          <span class="rule-icon">🔒</span>
+          <div class="rule-text"><strong>Fullscreen Arena:</strong> Stay in fullscreen mode for the entire quiz.</div>
+        </li>
+        <li>
+          <span class="rule-icon">🚫</span>
+          <div class="rule-text"><strong>No Copy / Paste:</strong> Text copying, selection, and context menus are disabled.</div>
+        </li>
+        <li>
+          <span class="rule-icon">📸</span>
+          <div class="rule-text"><strong>No Screenshots:</strong> Screen capture shortcuts and tools are restricted.</div>
+        </li>
+        <li>
+          <span class="rule-icon">⚠️</span>
+          <div class="rule-text"><strong>Tab Tracking:</strong> Tab switching & window minimizations are logged to Admin.</div>
+        </li>
+        <li>
+          <span class="rule-icon">⚡</span>
+          <div class="rule-text"><strong>Live Evaluation:</strong> Instant server-verified scoring calculated upon submission.</div>
+        </li>
+      </ul>
+    </div>
+
+    <button id="enterFsBtn" class="btn primary full enter-arena-btn">
+      <span>ENTER FULLSCREEN & START QUIZ</span>
+      <span style="font-size: 14px;">⛶</span>
     </button>
   </div>
 </div>
