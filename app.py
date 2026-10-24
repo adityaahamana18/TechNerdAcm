@@ -87,6 +87,10 @@ def init_db():
                 details TEXT NOT NULL,
                 created_at DOUBLE PRECISION NOT NULL
             );
+            -- Settings for global stage flow control
+            INSERT INTO settings(key, value) VALUES('stage1_active', '0') ON CONFLICT(key) DO NOTHING;
+            INSERT INTO settings(key, value) VALUES('stage2_active', '0') ON CONFLICT(key) DO NOTHING;
+            INSERT INTO settings(key, value) VALUES('stage3_active', '0') ON CONFLICT(key) DO NOTHING;
             """)
         else:
             # SQLite schema for local development
@@ -156,6 +160,9 @@ def init_db():
             c.execute("INSERT INTO stages(stage_num, name, requires_topic_choice) VALUES(?,?,?) ON CONFLICT(stage_num) DO NOTHING", (snum, sname, req))
 
         c.execute("INSERT INTO settings(key,value) VALUES('event_code','TECH2026') ON CONFLICT(key) DO NOTHING")
+        c.execute("INSERT INTO settings(key,value) VALUES('stage1_active','0') ON CONFLICT(key) DO NOTHING")
+        c.execute("INSERT INTO settings(key,value) VALUES('stage2_active','0') ON CONFLICT(key) DO NOTHING")
+        c.execute("INSERT INTO settings(key,value) VALUES('stage3_active','0') ON CONFLICT(key) DO NOTHING")
 
         # Ensure Stage 1 has all 25 official questions in the DB
         stage1_count_row = c.execute("SELECT COUNT(*) as n FROM questions WHERE stage=1").fetchone()
@@ -391,7 +398,24 @@ def start_stage():
         session[f"stage_{s_num}_started_{pid}"] = True
     return jsonify({"ok": True})
 
-# Dynamic Multi-Stage Quiz Progression API
+def get_stage_top_participant_ids(c, stage_num, limit):
+    """Returns set of participant IDs who ranked in the top `limit` for a given stage."""
+    rows = c.execute("""
+        SELECT p.id,
+               COALESCE(SUM(r.points), 0) score,
+               COALESCE(SUM(r.correct), 0) correct,
+               MAX(r.answered_at) last_answered
+        FROM participants p
+        JOIN responses r ON r.participant_id = p.id
+        JOIN questions q ON q.id = r.question_id
+        WHERE q.stage = ?
+        GROUP BY p.id
+        ORDER BY score DESC, correct DESC, last_answered ASC
+        LIMIT ?
+    """, (stage_num, limit)).fetchall()
+    return {r["id"] if isinstance(r, dict) else r[0] for r in rows}
+
+# Dynamic Multi-Stage Quiz Progression API with Stage Waiting Room & Cutoff Logic
 @app.route("/api/quiz")
 def quiz_state():
     pid = session.get("participant_id")
@@ -402,7 +426,7 @@ def quiz_state():
         return jsonify({"error": "Rate limit exceeded. Please wait a moment."}), 429
 
     with db() as c:
-        p = c.execute("SELECT id, chosen_topic FROM participants WHERE id=?", (pid,)).fetchone()
+        p = c.execute("SELECT id, name, chosen_topic FROM participants WHERE id=?", (pid,)).fetchone()
         if not p:
             session.pop("participant_id", None)
             return jsonify({"status": "reset", "error": "Quiz reset by organizer. Please rejoin."}), 401
@@ -412,7 +436,7 @@ def quiz_state():
         # Already answered questions by this participant
         answered_ids = {row["question_id"] for row in c.execute("SELECT question_id FROM responses WHERE participant_id=?", (pid,)).fetchall()}
         
-        # Current score calculation
+        # Current overall score calculation
         score_row = c.execute("SELECT COALESCE(SUM(points), 0) total_score, COUNT(id) answered_count FROM responses WHERE participant_id=?", (pid,)).fetchone()
         current_score = score_row["total_score"]
         answered_count = score_row["answered_count"]
@@ -423,16 +447,45 @@ def quiz_state():
         if not stages:
             return jsonify({"status": "empty", "message": "No stages configured yet."})
 
-        # Process each stage dynamically
+        # Process stages sequentially
         for stage_idx, stage in enumerate(stages):
             s_num = stage["stage_num"]
             s_name = stage["name"]
             req_topic = bool(stage["requires_topic_choice"])
+            stage_active = setting(c, f"stage{s_num}_active", "0") == "1"
+
+            # Check Qualification & Cutoff for Stage 2 & Stage 3
+            if s_num == 2:
+                # Stage 2 requires Top 10 qualification from Stage 1
+                top10_s1 = get_stage_top_participant_ids(c, 1, 10)
+                if pid not in top10_s1:
+                    # Participant did not qualify for Stage 2
+                    return jsonify({
+                        "status": "eliminated",
+                        "stage": 1,
+                        "stage_name": stages[0]["name"],
+                        "current_score": current_score,
+                        "message": "Stage 1 Completed! Only the Top 10 participants qualify for Stage 2. Thank you for participating!"
+                    })
+
+            elif s_num == 3:
+                # Stage 3 requires Top 3 qualification from Stage 2
+                top3_s2 = get_stage_top_participant_ids(c, 2, 3)
+                if pid not in top3_s2:
+                    # Participant did not qualify for Stage 3
+                    return jsonify({
+                        "status": "eliminated",
+                        "stage": 2,
+                        "stage_name": stages[1]["name"] if len(stages) > 1 else "Stage 2",
+                        "current_score": current_score,
+                        "message": "Stage 2 Completed! Only the Top 3 finalists advance to Stage 3 Specialization Arena."
+                    })
 
             # Check if this stage requires topic selection and user hasn't chosen one yet
             if req_topic:
                 available_topics = [r["topic"] for r in c.execute("SELECT DISTINCT topic FROM questions WHERE stage=? AND active=1", (s_num,)).fetchall() if r["topic"]]
                 if not chosen_topic or chosen_topic not in available_topics:
+                    # Prompt topic selection before entering stage questions
                     return jsonify({
                         "status": "topic_selection",
                         "stage": s_num,
@@ -445,45 +498,45 @@ def quiz_state():
             else:
                 stage_qs = c.execute("SELECT * FROM questions WHERE stage=? AND active=1 ORDER BY id ASC", (s_num,)).fetchall()
 
-            # Check if stage has questions and user is just entering this stage
             unanswered_qs = [q for q in stage_qs if q["id"] not in answered_ids]
 
-            # If user has not acknowledged entering this stage (e.g. Stage 2, Stage 3 intermission)
-            stage_ack_key = f"stage_{s_num}_started_{pid}"
-            if s_num > 1 and len(unanswered_qs) == len(stage_qs) and not session.get(stage_ack_key):
-                prev_stage_name = stages[stage_idx - 1]["name"] if stage_idx > 0 else f"Stage {s_num - 1}"
-                return jsonify({
-                    "status": "stage_intro",
-                    "stage": s_num,
-                    "stage_title": f"STAGE 0{s_num}: {s_name.upper()}",
-                    "stage_name": s_name,
-                    "prev_stage_name": prev_stage_name,
-                    "question_count": len(stage_qs),
-                    "current_score": current_score,
-                    "message": f"Great job completing {prev_stage_name}! Ready for Stage {s_num}?"
-                })
-
-            # Find unanswered question in this stage
-            for idx, q in enumerate(stage_qs):
-                if q["id"] not in answered_ids:
-                    session[f"q_delivered_{q['id']}"] = time.time()
+            # If user has unanswered questions in this stage:
+            if unanswered_qs:
+                # If stage has not been started by Admin yet -> show WAITING ROOM
+                if not stage_active:
+                    prev_stage_name = stages[stage_idx - 1]["name"] if stage_idx > 0 else None
                     return jsonify({
-                        "status": "in_progress",
+                        "status": "waiting_room",
                         "stage": s_num,
-                        "total_stages": len(stages),
-                        "stage_title": f"STAGE {s_num}: {s_name.upper()}",
-                        "topic": q["topic"],
-                        "stage_index": idx + 1,
-                        "stage_total": len(stage_qs),
+                        "stage_title": f"STAGE 0{s_num}: {s_name.upper()}",
+                        "stage_name": s_name,
+                        "prev_stage_name": prev_stage_name,
                         "current_score": current_score,
-                        "question": {
-                            "id": q["id"], "question": q["question"],
-                            "a": q["a"], "b": q["b"], "c": q["c"], "d": q["d"],
-                            "points": q["points"], "seconds": q["seconds"]
-                        }
+                        "question_count": len(stage_qs),
+                        "message": f"You are in the waiting area for Stage {s_num} ({s_name}). Waiting for Admin to start the stage for all participants simultaneously..."
                     })
 
-        # All configured stages completed!
+                # Stage is active! Find the next unanswered question
+                for idx, q in enumerate(stage_qs):
+                    if q["id"] not in answered_ids:
+                        session[f"q_delivered_{q['id']}"] = time.time()
+                        return jsonify({
+                            "status": "in_progress",
+                            "stage": s_num,
+                            "total_stages": len(stages),
+                            "stage_title": f"STAGE {s_num}: {s_name.upper()}",
+                            "topic": q["topic"],
+                            "stage_index": idx + 1,
+                            "stage_total": len(stage_qs),
+                            "current_score": current_score,
+                            "question": {
+                                "id": q["id"], "question": q["question"],
+                                "a": q["a"], "b": q["b"], "c": q["c"], "d": q["d"],
+                                "points": q["points"], "seconds": q["seconds"]
+                            }
+                        })
+
+        # All stages completed!
         return jsonify({
             "status": "completed",
             "current_score": current_score,
@@ -546,21 +599,54 @@ def answer():
 @app.route("/api/leaderboard")
 @admin_required
 def leaderboard():
+    stage_param = request.args.get("stage", "all").strip().lower()
     with db() as c:
-        rows = c.execute("""
-            SELECT p.id, p.name, p.email, p.team, p.chosen_topic,
-                   COALESCE(SUM(r.points), 0) score,
-                   COALESCE(SUM(r.correct), 0) correct,
-                   COUNT(r.id) answered,
-                   MIN(r.answered_at) first_answered,
-                   MAX(r.answered_at) last_answered
-            FROM participants p 
-            LEFT JOIN responses r ON r.participant_id = p.id
-            GROUP BY p.id 
-            ORDER BY score DESC, correct DESC, last_answered ASC
-            LIMIT 200
-        """).fetchall()
+        if stage_param in ("1", "2", "3"):
+            snum = int(stage_param)
+            rows = c.execute("""
+                SELECT p.id, p.name, p.email, p.team, p.chosen_topic,
+                       COALESCE(SUM(r.points), 0) score,
+                       COALESCE(SUM(r.correct), 0) correct,
+                       COUNT(r.id) answered,
+                       MIN(r.answered_at) first_answered,
+                       MAX(r.answered_at) last_answered
+                FROM participants p
+                JOIN responses r ON r.participant_id = p.id
+                JOIN questions q ON q.id = r.question_id
+                WHERE q.stage = ?
+                GROUP BY p.id
+                ORDER BY score DESC, correct DESC, last_answered ASC
+                LIMIT 200
+            """, (snum,)).fetchall()
+        else:
+            rows = c.execute("""
+                SELECT p.id, p.name, p.email, p.team, p.chosen_topic,
+                       COALESCE(SUM(r.points), 0) score,
+                       COALESCE(SUM(r.correct), 0) correct,
+                       COUNT(r.id) answered,
+                       MIN(r.answered_at) first_answered,
+                       MAX(r.answered_at) last_answered
+                FROM participants p 
+                LEFT JOIN responses r ON r.participant_id = p.id
+                GROUP BY p.id 
+                ORDER BY score DESC, correct DESC, last_answered ASC
+                LIMIT 200
+            """).fetchall()
         return jsonify([dict(r) for r in rows])
+
+# Admin stage control toggle (Start / Pause Stage for all participants)
+@app.route("/admin/stage-control", methods=["POST"])
+@admin_required
+def admin_stage_control():
+    stage = request.form.get("stage")
+    action = request.form.get("action")
+    if stage in ("1", "2", "3") and action in ("start", "pause"):
+        val = "1" if action == "start" else "0"
+        with db() as c:
+            set_setting(c, f"stage{stage}_active", val)
+        status_word = "STARTED (Live for all participants)" if val == "1" else "PAUSED (Waiting Room active)"
+        flash(f"Stage {stage} has been {status_word}.", "success")
+    return redirect(url_for("dashboard"))
 
 @app.route("/api/admin/security-logs")
 @admin_required
@@ -619,13 +705,19 @@ def dashboard():
         total_responses = c.execute("SELECT COUNT(*) n FROM responses").fetchone()["n"]
         total_alerts = c.execute("SELECT COUNT(*) n FROM security_logs WHERE event_type != 'PARTICIPANT_JOINED'").fetchone()["n"]
         event_code = setting(c, "event_code", "TECH2026")
+        s1_active = setting(c, "stage1_active", "0") == "1"
+        s2_active = setting(c, "stage2_active", "0") == "1"
+        s3_active = setting(c, "stage3_active", "0") == "1"
     return render_template("admin.html", 
                            stages=stages,
                            questions=questions, 
                            participants=participants, 
                            total_responses=total_responses,
                            total_alerts=total_alerts,
-                           event_code=event_code)
+                           event_code=event_code,
+                           s1_active=s1_active,
+                           s2_active=s2_active,
+                           s3_active=s3_active)
 
 # Stage Management Routes (Add Stage, Edit Stage, Delete Stage)
 @app.route("/admin/stage", methods=["POST"])

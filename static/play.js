@@ -235,7 +235,65 @@ async function loadQuestion() {
     
     $("playerScore").textContent = `${data.current_score || 0} PTS`;
     
-    // 1. Stage Intermission Screen (Stage 2 or any non-topic stage kickoff)
+    // 1. Stage Waiting Room (Waiting for Admin to launch Stage simultaneously)
+    if (data.status === "waiting_room") {
+      stopTimer();
+      isQuizActive = false;
+      const sNum = data.stage;
+      $("statusPill").textContent = `STAGE 0${sNum} WAITING`;
+      $("roundLabel").textContent = "WAITING FOR ADMIN KICKOFF";
+      $("progressBar").style.width = `${Math.round(((sNum - 1) / 3) * 100)}%`;
+      $("questionCount").textContent = `STAGE 0${sNum} · ${data.stage_name.toUpperCase()}`;
+      $("questionText").textContent = `⏳ Stage ${sNum} Waiting Room`;
+      $("timer").textContent = "⏳";
+      $("feedback").textContent = "";
+
+      $("options").innerHTML = `
+        <div style="background: radial-gradient(circle at 50% 20%, rgba(56, 189, 248, 0.12), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 18px; padding: 34px 24px; text-align: center; margin-top: 10px; box-shadow: 0 15px 40px rgba(0,0,0,0.5);">
+          <div style="font-size: 52px; margin-bottom: 12px; filter: drop-shadow(0 0 15px rgba(56,189,248,0.6)); animation: pulseNeon 2.5s infinite ease-in-out;">⏳</div>
+          <h3 style="font-size: 24px; font-weight:800; color: var(--cyan); margin-bottom: 8px;">Waiting for Admin to Start Stage ${sNum}</h3>
+          <p class="muted" style="max-width: 500px; margin: 0 auto 18px; font-size: 14px; line-height: 1.65; color:#cbd5e1;">
+            ${data.message || `You are ready for Stage ${sNum}! The stage will start automatically for all participants once the Admin gives the command.`}
+          </p>
+          <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:8px 16px; border-radius:20px; font-size:12px; font-weight:700; color:var(--cyan);">
+            <span class="live-dot"></span> Auto-Syncing with Host Room...
+          </div>
+        </div>
+      `;
+
+      // Auto-poll every 3 seconds to check if Admin has started the stage
+      setTimeout(() => {
+        if (!isQuizActive) loadQuestion();
+      }, 3000);
+      return;
+    }
+
+    // 2. Participant Cutoff / Eliminated Screen
+    if (data.status === "eliminated") {
+      stopTimer();
+      isQuizActive = false;
+      $("statusPill").textContent = "EVALUATION COMPLETED";
+      $("roundLabel").textContent = "STAGE CUTOFF";
+      $("progressBar").style.width = "100%";
+      $("questionCount").textContent = "ROUND CONCLUDED";
+      $("questionText").textContent = `🏁 Thank you for competing in TECHNERD 2026!`;
+      $("timer").textContent = "★";
+      $("feedback").textContent = "";
+
+      $("options").innerHTML = `
+        <div style="background: radial-gradient(circle at 50% 20%, rgba(244, 63, 94, 0.12), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(244, 63, 94, 0.35); border-radius: 18px; padding: 36px 24px; text-align: center; margin-top: 10px; box-shadow: 0 15px 40px rgba(0,0,0,0.5);">
+          <div style="font-size: 52px; margin-bottom: 12px; filter: drop-shadow(0 0 15px rgba(244,63,94,0.6));">🎯</div>
+          <h3 style="font-size: 26px; font-weight:800; color: #fda4af; margin-bottom: 8px;">Final Score: ${data.current_score} Points</h3>
+          <p class="muted" style="max-width: 480px; margin: 0 auto 20px; font-size: 14px; line-height: 1.65; color:#cbd5e1;">
+            ${data.message || 'Round completed. High competition cutoff reached. Your score and performance have been recorded on the live leaderboard.'}
+          </p>
+          <a href="/logout" class="btn ghost" style="padding:12px 24px; border-color:rgba(255,255,255,0.2);">RETURN TO HOME ➔</a>
+        </div>
+      `;
+      return;
+    }
+
+    // 3. Stage Intermission Screen (Stage 2 or any non-topic stage kickoff)
     if (data.status === "stage_intro") {
       stopTimer();
       isQuizActive = false;

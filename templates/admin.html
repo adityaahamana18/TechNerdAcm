@@ -128,14 +128,114 @@
  </div>
 </section>
 
-<!-- Real-Time Server-Verified Leaderboard -->
+<!-- Synchronized Stage Gate Controls (Waiting Room & Live Kickoff) -->
+<section class="panel admin-section" style="border-color: rgba(168, 85, 247, 0.4); box-shadow: 0 10px 30px rgba(168, 85, 247, 0.08);">
+  <div class="section-heading">
+    <div>
+      <div class="section-kicker" style="color: #d8b4fe;">SYNCHRONIZED STAGE FLOW CONTROL</div>
+      <h2>Live Stage Gates & Waiting Room Control</h2>
+    </div>
+    <span class="live-badge" style="border-color:rgba(168, 85, 247, 0.4); color:#d8b4fe; background:rgba(168,85,247,0.12);">
+      <i></i> SIMULTANEOUS START ACTIVE
+    </span>
+  </div>
+  <p class="muted" style="margin-top:6px;">
+    Control when each stage begins. Participants will wait in an animated waiting area until you click <strong>"START STAGE FOR ALL"</strong>.
+  </p>
+
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:16px; margin-top:20px;">
+    <!-- Stage 1 Gate Card -->
+    <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; display:flex; flex-direction:column; justify-content:space-between;">
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="color:var(--text-bright); font-size:15px;">STAGE 1: CS FUNDAMENTALS</strong>
+          {% if s1_active %}
+          <span style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; font-size:10px; font-weight:800; padding:3px 8px; border-radius:12px;">● LIVE</span>
+          {% else %}
+          <span style="background:rgba(245,158,11,0.15); border:1px solid #f59e0b; color:#f59e0b; font-size:10px; font-weight:800; padding:3px 8px; border-radius:12px;">⏳ WAITING ROOM</span>
+          {% endif %}
+        </div>
+        <p class="muted" style="font-size:12px; line-height:1.5;">All joined students begin here. <strong>Top 10</strong> on Stage 1 Leaderboard will qualify for Stage 2.</p>
+      </div>
+      <form method="post" action="{{ url_for('admin_stage_control') }}" style="margin-top:14px;">
+        <input type="hidden" name="stage" value="1">
+        {% if s1_active %}
+        <input type="hidden" name="action" value="pause">
+        <button class="btn danger-outline full" style="padding:10px;" type="submit">⏸ PAUSE STAGE 1 (MOVE TO WAITING ROOM)</button>
+        {% else %}
+        <input type="hidden" name="action" value="start">
+        <button class="btn primary full" style="padding:10px; font-weight:800;" type="submit">▶ START STAGE 1 FOR ALL PARTICIPANTS</button>
+        {% endif %}
+      </form>
+    </div>
+
+    <!-- Stage 2 Gate Card -->
+    <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; display:flex; flex-direction:column; justify-content:space-between;">
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="color:var(--text-bright); font-size:15px;">STAGE 2: CORE SYSTEMS</strong>
+          {% if s2_active %}
+          <span style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; font-size:10px; font-weight:800; padding:3px 8px; border-radius:12px;">● LIVE</span>
+          {% else %}
+          <span style="background:rgba(245,158,11,0.15); border:1px solid #f59e0b; color:#f59e0b; font-size:10px; font-weight:800; padding:3px 8px; border-radius:12px;">⏳ WAITING ROOM</span>
+          {% endif %}
+        </div>
+        <p class="muted" style="font-size:12px; line-height:1.5;">Restricted to <strong>Top 10</strong> from Stage 1. <strong>Top 3</strong> finalists will advance to Stage 3.</p>
+      </div>
+      <form method="post" action="{{ url_for('admin_stage_control') }}" style="margin-top:14px;">
+        <input type="hidden" name="stage" value="2">
+        {% if s2_active %}
+        <input type="hidden" name="action" value="pause">
+        <button class="btn danger-outline full" style="padding:10px;" type="submit">⏸ PAUSE STAGE 2 (MOVE TO WAITING ROOM)</button>
+        {% else %}
+        <input type="hidden" name="action" value="start">
+        <button class="btn primary full" style="padding:10px; font-weight:800;" type="submit">▶ START STAGE 2 FOR QUALIFIED TOP 10</button>
+        {% endif %}
+      </form>
+    </div>
+
+    <!-- Stage 3 Gate Card -->
+    <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; display:flex; flex-direction:column; justify-content:space-between;">
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="color:var(--text-bright); font-size:15px;">STAGE 3: SPECIALIZATION</strong>
+          {% if s3_active %}
+          <span style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; font-size:10px; font-weight:800; padding:3px 8px; border-radius:12px;">● LIVE</span>
+          {% else %}
+          <span style="background:rgba(245,158,11,0.15); border:1px solid #f59e0b; color:#f59e0b; font-size:10px; font-weight:800; padding:3px 8px; border-radius:12px;">⏳ WAITING ROOM</span>
+          {% endif %}
+        </div>
+        <p class="muted" style="font-size:12px; line-height:1.5;">Grand Finale for <strong>Top 3 Finalists</strong>. Topic-specific questions chooseable by participants.</p>
+      </div>
+      <form method="post" action="{{ url_for('admin_stage_control') }}" style="margin-top:14px;">
+        <input type="hidden" name="stage" value="3">
+        {% if s3_active %}
+        <input type="hidden" name="action" value="pause">
+        <button class="btn danger-outline full" style="padding:10px;" type="submit">⏸ PAUSE STAGE 3 (MOVE TO WAITING ROOM)</button>
+        {% else %}
+        <input type="hidden" name="action" value="start">
+        <button class="btn primary full" style="padding:10px; font-weight:800;" type="submit">▶ START STAGE 3 FOR TOP 3 FINALISTS</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- Real-Time Server-Verified Leaderboard with Stage Filter Tabs -->
 <section class="panel admin-section">
  <div class="section-heading">
   <div>
    <div class="section-kicker">LIVE PERFORMANCE BOARD</div>
-   <h2>Real-Time Leaderboard</h2>
+   <h2>Multi-Stage Leaderboard</h2>
   </div>
-  <div style="display:flex;gap:12px;align-items:center;">
+  <div style="display:flex;gap:12px;align-items:center; flex-wrap:wrap;">
+    <!-- Stage Leaderboard Filter Buttons -->
+    <div style="display:flex; gap:6px; background:rgba(0,0,0,0.4); padding:3px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
+      <button type="button" class="stage-tab-btn active" onclick="switchLeaderboardStage('all', this)">Overall</button>
+      <button type="button" class="stage-tab-btn" onclick="switchLeaderboardStage('1', this)">Stage 1 (Top 10 Qualify)</button>
+      <button type="button" class="stage-tab-btn" onclick="switchLeaderboardStage('2', this)">Stage 2 (Top 3 Advance)</button>
+      <button type="button" class="stage-tab-btn" onclick="switchLeaderboardStage('3', this)">Stage 3 (Finalists)</button>
+    </div>
     <span class="live-badge"><i></i> AUTO REFRESHING</span>
     <a href="{{ url_for('admin_participants') }}" class="text-link" target="_blank">Export Raw JSON ↗</a>
   </div>
@@ -331,22 +431,42 @@
     document.getElementById("cancelEditBtn").style.display = "none";
   }
 
-  // Real-Time Leaderboard Fetcher with Stage 3 Chosen Topic Badge
+  let currentSelectedStage = "all";
+
+  function switchLeaderboardStage(stageNum, btnEl) {
+    currentSelectedStage = stageNum;
+    document.querySelectorAll(".stage-tab-btn").forEach(b => b.classList.remove("active"));
+    if (btnEl) btnEl.classList.add("active");
+    refreshAdminLeaderboard();
+  }
+
+  // Real-Time Leaderboard Fetcher with Stage Specific Filter Tabs
   async function refreshAdminLeaderboard() {
     try {
-      const res = await fetch("/api/leaderboard");
+      const res = await fetch(`/api/leaderboard?stage=${currentSelectedStage}`);
       if (!res.ok) return;
       const rows = await res.json();
       const host = document.getElementById("adminLeaderboardList");
       if (!host) return;
       if (!rows.length) {
-        host.innerHTML = '<p class="muted">No participant responses recorded yet.</p>';
+        host.innerHTML = `<p class="muted">No participant responses recorded yet for ${currentSelectedStage === 'all' ? 'any stage' : 'Stage ' + currentSelectedStage}.</p>`;
         return;
       }
       host.innerHTML = "";
       rows.forEach((p, idx) => {
         const row = document.createElement("div");
         row.className = "leader-row";
+        
+        // Qualification badge highlighting
+        let qualifyBadge = "";
+        if (currentSelectedStage === "1") {
+          if (idx < 10) qualifyBadge = `<span style="font-size:9.5px; font-weight:800; color:#10b981; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); border-radius:4px; padding:2px 6px; margin-left:6px;">✓ QUALIFIED FOR STAGE 2</span>`;
+          else qualifyBadge = `<span style="font-size:9.5px; font-weight:600; color:#ef4444; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); border-radius:4px; padding:2px 6px; margin-left:6px;">ELIMINATED</span>`;
+        } else if (currentSelectedStage === "2") {
+          if (idx < 3) qualifyBadge = `<span style="font-size:9.5px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); border-radius:4px; padding:2px 6px; margin-left:6px;">★ STAGE 3 FINALIST</span>`;
+          else qualifyBadge = `<span style="font-size:9.5px; font-weight:600; color:#ef4444; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); border-radius:4px; padding:2px 6px; margin-left:6px;">ELIMINATED</span>`;
+        }
+
         const rank = document.createElement("span");
         rank.className = "rank" + (idx < 3 ? " top" : "");
         rank.textContent = String(idx + 1).padStart(2, "0");
@@ -356,6 +476,7 @@
         name.className = "player-name";
         name.innerHTML = `
           ${p.name} ${p.email ? `<span style="font-weight:400;color:#94a3b8;font-size:11px;margin-left:6px;">(${p.email})</span>` : ''}
+          ${qualifyBadge}
           ${p.chosen_topic ? `<span style="font-size:9px; font-weight:700; color:var(--cyan); border:1px solid rgba(56,189,248,0.3); background:rgba(56,189,248,0.1); border-radius:4px; padding:1px 6px; margin-left:6px;">Stage 3: ${p.chosen_topic}</span>` : ''}
         `;
         
