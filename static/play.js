@@ -367,7 +367,7 @@ async function loadQuestion() {
       $("options").innerHTML = `
         <div style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(168, 85, 247, 0.12)); border: 1px solid var(--border); border-radius: 16px; padding: 34px 20px; text-align: center; margin-top: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.4);">
           <div style="font-size: 48px; margin-bottom: 12px; filter:drop-shadow(0 0 15px rgba(56,189,248,0.5));">🏆</div>
-          <h3 style="font-size: 30px; font-family: 'Space Grotesk', sans-serif; color: var(--cyan); margin-bottom: 6px;">Total Score: ${data.current_score} Points</h3>
+          <h3 style="font-size: 30px; font-weight:800; color: var(--cyan); margin-bottom: 6px;">Total Score: ${data.current_score} Points</h3>
           <p class="muted" style="max-width: 460px; margin: 0 auto; font-size:14px;">
             Specialization Domain: <strong style="color:#ffffff;">${data.chosen_topic || 'Specialized Tech'}</strong><br>
             All stage answers and anti-cheat verification have been logged directly into the Admin Live Leaderboard.

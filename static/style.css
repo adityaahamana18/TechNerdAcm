@@ -1,6 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
+  /* Harmonized Global Font */
+  --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
   /* Premium Dark Tech Palette */
   --bg: #070b14;
   --bg-subtle: #0d1424;
@@ -46,11 +50,13 @@ html {
 
 body {
   color: var(--text-main);
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-main);
   background-color: var(--bg);
   min-height: 100vh;
   overflow-x: hidden;
   position: relative;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Subtle Interactive Background Grid */
@@ -266,7 +272,7 @@ footer {
 }
 
 .hero h1 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-main);
   font-size: clamp(48px, 7vw, 76px);
   line-height: 1.08;
   font-weight: 800;
@@ -374,7 +380,7 @@ footer {
 }
 
 .join-card h2 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-main);
   font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.5px;
@@ -415,7 +421,7 @@ input, textarea, select {
   border-radius: 8px;
   padding: 13px 15px;
   color: var(--text-main);
-  font: 500 14px 'Inter', sans-serif;
+  font: 500 14px var(--font-main);
   outline: none;
   transition: all 0.2s ease;
 }
@@ -614,7 +620,7 @@ input:focus, textarea:focus, select:focus {
   color: var(--text-main);
   margin-bottom: 4px;
   font-weight: 700;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-main);
 }
 
 .f-content p {
@@ -705,7 +711,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .timer strong {
-  font: 700 24px 'Space Grotesk', sans-serif;
+  font: 700 24px var(--font-main);
   color: var(--cyan);
   margin-top: 2px;
 }
@@ -776,7 +782,7 @@ input:focus, textarea:focus, select:focus {
   color: var(--text-main);
   padding: 15px 18px;
   cursor: pointer;
-  font: 500 14px 'Inter', sans-serif;
+  font: 500 14px var(--font-main);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
 }
@@ -898,7 +904,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .admin-head h1 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-main);
   font-size: 32px;
   font-weight: 800;
   letter-spacing: -0.5px;
@@ -927,7 +933,7 @@ input:focus, textarea:focus, select:focus {
 
 .stat strong {
   display: block;
-  font: 700 26px 'Space Grotesk', sans-serif;
+  font: 700 26px var(--font-main);
   margin-top: 8px;
   color: var(--text-main);
 }
@@ -1170,7 +1176,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .enter-arena-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-main);
   font-size: clamp(24px, 3.5vw, 28px);
   font-weight: 800;
   color: #ffffff;
@@ -1414,7 +1420,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .loader-logo-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-main);
   font-size: clamp(48px, 9vw, 84px);
   font-weight: 900;
   letter-spacing: -2px;
@@ -1576,19 +1582,94 @@ input:focus, textarea:focus, select:focus {
   .cursor-dot, .cursor-ring { display: none; }
 }
 
-/* Responsive Rules */
-@media(max-width: 860px) {
-  .admin-grid { grid-template-columns: 1fr; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .feature-grid { grid-template-columns: 1fr; }
-  .hero h1 { letter-spacing: -1.5px; }
+/* Responsive Rules & Mobile Optimization */
+@media(max-width: 992px) {
+  .admin-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .admin-head > div:last-child {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
 }
 
-@media(max-width: 520px) {
-  .join-card, .quiz-card, .admin-section { padding: 22px 18px; }
-  .form-three { grid-template-columns: 1fr; }
-  .admin-head { flex-direction: column; align-items: flex-start; }
-  .topbar { padding: 0 16px; }
+@media(max-width: 860px) {
+  .admin-grid { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .hero h1 { letter-spacing: -1px; font-size: 38px; }
+  .hero p { font-size: 14px; }
+}
+
+@media(max-width: 640px) {
+  .topbar {
+    padding: 0 14px;
+    height: 64px;
+  }
+  .brand small { display: none; }
+  .brand-mark { width: 30px; height: 30px; font-size: 15px; }
+  .top-actions { gap: 8px; }
+  .admin-link { padding: 6px 10px; font-size: 10px; }
+  
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .stat { padding: 14px; }
+  .stat small { font-size: 9px; }
+  .stat strong { font-size: 20px; }
+
+  .join-card, .quiz-card, .admin-section {
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+  
+  .section-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .form-two, .form-three {
+    grid-template-columns: 1fr;
+  }
+
+  .stage-tab-container {
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  
+  .leader-row {
+    grid-template-columns: 32px 1fr auto;
+    padding: 10px 8px;
+    gap: 10px;
+  }
+  .player-name {
+    font-size: 12px;
+  }
+  .score {
+    font-size: 13px;
+  }
+
+  .dev-replica-actions {
+    width: 100%;
+    justify-content: center;
+  }
+  .dev-replica-btn {
+    flex: 1;
+    min-width: 120px;
+    justify-content: center;
+  }
+}
+
+@media(max-width: 420px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .stat { display: flex; justify-content: space-between; align-items: center; }
+  .stat strong { margin-top: 0; }
+  .admin-head h1 { font-size: 26px; }
 }
 
 /* ==========================================================================
@@ -1795,7 +1876,7 @@ input:focus, textarea:focus, select:focus {
   color: #38bdf8;
   text-transform: uppercase;
   margin-bottom: 6px;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-main);
 }
 
 .dev-replica-name {
@@ -1944,3 +2025,4 @@ input:focus, textarea:focus, select:focus {
     height: 110px;
   }
 }
+

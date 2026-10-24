@@ -230,11 +230,11 @@
   </div>
   <div style="display:flex;gap:12px;align-items:center; flex-wrap:wrap;">
     <!-- Stage Leaderboard Filter Buttons -->
-    <div style="display:flex; gap:6px; background:rgba(0,0,0,0.4); padding:3px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
-      <button type="button" class="stage-tab-btn active" onclick="switchLeaderboardStage('all', this)">Overall</button>
-      <button type="button" class="stage-tab-btn" onclick="switchLeaderboardStage('1', this)">Stage 1 (Top 10 Qualify)</button>
-      <button type="button" class="stage-tab-btn" onclick="switchLeaderboardStage('2', this)">Stage 2 (Top 3 Advance)</button>
-      <button type="button" class="stage-tab-btn" onclick="switchLeaderboardStage('3', this)">Stage 3 (Finalists)</button>
+    <div class="stage-tab-container" style="display:flex; gap:6px; background:rgba(0,0,0,0.4); padding:4px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+      <button type="button" class="stage-tab-btn active" onclick="switchLeaderboardStage('all', this)">Overall Leaderboard</button>
+      <button type="button" class="stage-tab-btn" onclick="switchLeaderboardStage('1', this)">Stage 1 (Top 10)</button>
+      <button type="button" class="stage-tab-btn" onclick="switchLeaderboardStage('2', this)">Stage 2 (Top 3)</button>
+      <button type="button" class="stage-tab-btn" onclick="switchLeaderboardStage('3', this)">Stage 3 (Final)</button>
     </div>
     <span class="live-badge"><i></i> AUTO REFRESHING</span>
     <a href="{{ url_for('admin_participants') }}" class="text-link" target="_blank">Export Raw JSON ↗</a>
