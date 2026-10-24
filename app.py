@@ -5,7 +5,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "change-this-secret-key-before-deployment")
-DB = os.path.join(os.path.dirname(__file__), "technerd.db")
+
+# DB path supports Render Persistent Disk (e.g. DB_PATH=/data/technerd.db)
+DB = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "technerd.db"))
+db_dir = os.path.dirname(DB)
+if db_dir and not os.path.exists(db_dir):
+    try:
+        os.makedirs(db_dir, exist_ok=True)
+    except Exception as e:
+        print("Warning creating db dir:", e)
 
 RATE_LIMITS = {}
 
@@ -91,6 +99,23 @@ def init_db():
         c.execute("INSERT OR IGNORE INTO stages(stage_num, name, requires_topic_choice) VALUES(3, 'Specialization Domain', 1)")
 
         c.execute("INSERT OR IGNORE INTO settings(key,value) VALUES('event_code','TECH2026')")
+
+        # Auto-seed base questions if questions table is fresh/empty
+        q_count = c.execute("SELECT COUNT(*) n FROM questions").fetchone()["n"]
+        if q_count == 0:
+            sample_questions = [
+                (1, "CS Fundamentals", "Which data structure follows LIFO (Last In First Out)?", "Queue", "Stack", "Tree", "Graph", "b", 10, 25),
+                (1, "CS Fundamentals", "What is the time complexity of searching in a balanced BST?", "O(1)", "O(n)", "O(log n)", "O(n^2)", "c", 10, 25),
+                (2, "Core Tech", "Which protocol is used for secure communication over the web?", "HTTP", "FTP", "HTTPS", "SMTP", "c", 15, 25),
+                (2, "Core Tech", "What component in an OS manages hardware resources and processes?", "Compiler", "Kernel", "Linker", "Shell", "b", 15, 25),
+                (3, "Artificial Intelligence", "What algorithm is primarily used to train multi-layer neural networks?", "Dijkstra", "Backpropagation", "Binary Search", "Quicksort", "b", 20, 30),
+                (3, "Artificial Intelligence", "Which activation function outputs values in the range (0, 1)?", "ReLU", "Sigmoid", "Linear", "Tanh", "b", 20, 30),
+                (3, "Web & Cloud Architecture", "In REST APIs, which HTTP method is typically used to create a new resource?", "GET", "PUT", "POST", "DELETE", "c", 20, 30),
+                (3, "Web & Cloud Architecture", "Which DNS record maps a domain name directly to an IPv4 address?", "CNAME", "A Record", "MX Record", "TXT Record", "b", 20, 30),
+                (3, "Cybersecurity & Crypto", "Which encryption type uses a pair of public and private keys?", "Symmetric", "Asymmetric", "Hashing", "Obfuscation", "b", 20, 30),
+                (3, "Cybersecurity & Crypto", "What attack involves overwhelming a network/server with fake traffic?", "SQL Injection", "DDoS", "Phishing", "Cross-Site Scripting", "b", 20, 30)
+            ]
+            c.executemany("INSERT INTO questions(stage, topic, question, a, b, c, d, answer, points, seconds) VALUES(?,?,?,?,?,?,?,?,?,?)", sample_questions)
 
 ADMIN_EMAILS = {"adityaahamana18@gmail.com"}
 
