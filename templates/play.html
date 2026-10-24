@@ -22,6 +22,16 @@
   </div>
 </div>
 
+<!-- Warning Toast / Banner for Violations -->
+<div id="violationWarning" class="violation-banner" style="display:none;">
+  <span class="warning-icon">⚠️</span>
+  <div>
+    <strong>Security Alert:</strong> <span id="violationMsg">Suspicious activity detected!</span>
+    <small style="display:block; opacity:0.9; margin-top:2px;">This violation has been logged to the Admin Control Room.</small>
+  </div>
+  <button id="dismissWarningBtn" class="btn ghost" style="padding:6px 14px; font-size:10px; margin-left:auto;">DISMISS</button>
+</div>
+
 <!-- Screenshare Violation Overlay (Blurs & Locks Screen if Screen Share/Capture Active) -->
 <div id="screenShareBlocker" class="security-modal-overlay" style="display:none; z-index:999999; backdrop-filter:blur(25px); background:rgba(7,11,20,0.96);">
   <div class="security-modal panel" style="border-color:var(--danger); box-shadow:0 0 50px rgba(239,68,68,0.3); text-align:center;">

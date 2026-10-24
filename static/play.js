@@ -43,16 +43,20 @@ $("dismissWarningBtn").addEventListener("click", () => {
 });
 
 // Fullscreen Management
-function requestFullScreen() {
+async function requestFullScreen() {
   const el = document.documentElement;
-  if (el.requestFullscreen) {
-    el.requestFullscreen().catch(err => console.log(err));
-  } else if (el.mozRequestFullScreen) {
-    el.mozRequestFullScreen();
-  } else if (el.webkitRequestFullscreen) {
-    el.webkitRequestFullscreen();
-  } else if (el.msRequestFullscreen) {
-    el.msRequestFullscreen();
+  try {
+    if (el.requestFullscreen) {
+      await el.requestFullscreen();
+    } else if (el.mozRequestFullScreen) {
+      await el.mozRequestFullScreen();
+    } else if (el.webkitRequestFullscreen) {
+      await el.webkitRequestFullscreen();
+    } else if (el.msRequestFullscreen) {
+      await el.msRequestFullscreen();
+    }
+  } catch (err) {
+    console.warn("Fullscreen request:", err);
   }
 }
 
@@ -86,21 +90,23 @@ document.addEventListener("fullscreenchange", () => {
       if (btn) btn.textContent = "RE-ENTER FULLSCREEN TO RESUME ⛶";
 
       modal.style.display = "flex";
+      modal.style.opacity = "1";
+      modal.style.pointerEvents = "auto";
 
       const msg = `Fullscreen mode exited (${fullscreenExitCount} time(s))! Quiz paused until fullscreen resumed.`;
       showViolationWarning(msg);
       sendSecurityLog("FULLSCREEN_EXIT", `Exited fullscreen mode. Total: ${fullscreenExitCount}`);
     } else {
       // Re-entered fullscreen
-      if (isFullscreenPaused) {
-        isFullscreenPaused = false;
-        $("fsModal").style.display = "none";
-        // Resume timer if question active
-        if (currentQuestion && timeLeft > 0) {
-          startTimer(timeLeft);
-        } else {
-          loadQuestion();
-        }
+      isFullscreenPaused = false;
+      const modal = $("fsModal");
+      if (modal) modal.style.display = "none";
+      
+      // Resume timer if question active or refresh state
+      if (currentQuestion && timeLeft > 0) {
+        startTimer(timeLeft);
+      } else {
+        loadQuestion();
       }
     }
   }
@@ -440,14 +446,21 @@ async function submitAnswer(choice, clickedBtn, isTimeout = false) {
 }
 
 // Fullscreen Modal Activation
-$("enterFsBtn").addEventListener("click", () => {
-  requestFullScreen();
+$("enterFsBtn").addEventListener("click", async () => {
+  await requestFullScreen();
   $("fsModal").style.display = "none";
   isQuizStarted = true;
   isFullscreenPaused = false;
+  
+  // Always trigger loadQuestion or refresh active question
   if (!currentQuestion) {
     loadQuestion();
-  } else if (timeLeft > 0) {
-    startTimer(timeLeft);
+  } else {
+    // If returning to an existing question
+    if (timeLeft > 0) {
+      startTimer(timeLeft);
+    } else {
+      loadQuestion();
+    }
   }
 });
