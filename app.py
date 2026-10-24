@@ -80,6 +80,7 @@ def init_db():
             ALTER TABLE responses ADD COLUMN IF NOT EXISTS participant_name TEXT DEFAULT '';
             ALTER TABLE responses ADD COLUMN IF NOT EXISTS question_text TEXT DEFAULT '';
             ALTER TABLE responses ADD COLUMN IF NOT EXISTS selected_text TEXT DEFAULT '';
+            ALTER TABLE participants ADD COLUMN IF NOT EXISTS last_seen DOUBLE PRECISION DEFAULT 0;
             CREATE TABLE IF NOT EXISTS security_logs(
                 id SERIAL PRIMARY KEY,
                 participant_id INT,
@@ -128,7 +129,8 @@ def init_db():
                 team TEXT NOT NULL DEFAULT '',
                 access_code TEXT NOT NULL,
                 chosen_topic TEXT DEFAULT '',
-                joined_at REAL NOT NULL
+                joined_at REAL NOT NULL,
+                last_seen REAL DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS responses(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -426,6 +428,8 @@ def quiz_state():
         return jsonify({"error": "Rate limit exceeded. Please wait a moment."}), 429
 
     with db() as c:
+        now_ts = time.time()
+        c.execute("UPDATE participants SET last_seen=? WHERE id=?", (now_ts, pid))
         p = c.execute("SELECT id, name, chosen_topic FROM participants WHERE id=?", (pid,)).fetchone()
         if not p:
             session.pop("participant_id", None)
@@ -633,6 +637,72 @@ def leaderboard():
                 LIMIT 200
             """).fetchall()
         return jsonify([dict(r) for r in rows])
+
+# API to see participants currently waiting in stages
+@app.route("/api/admin/waiting-participants")
+@admin_required
+def waiting_participants_api():
+    stage_param = request.args.get("stage", "1").strip()
+    target_stage = int(stage_param) if stage_param in ("1", "2", "3") else 1
+    
+    with db() as c:
+        # Check active threshold: participants polled within last 20 seconds
+        active_cutoff = time.time() - 20
+        # All participants who have joined
+        all_participants = c.execute("""
+            SELECT p.id, p.name, p.email, p.team, p.chosen_topic, p.joined_at, p.last_seen,
+                   COALESCE(SUM(r.points), 0) score
+            FROM participants p
+            LEFT JOIN responses r ON r.participant_id = p.id
+            GROUP BY p.id
+            ORDER BY p.last_seen DESC, score DESC
+        """).fetchall()
+
+        # Check stage status
+        s_active = setting(c, f"stage{target_stage}_active", "0") == "1"
+
+        # Determine who belongs to target_stage waiting area
+        waiting_list = []
+        top10_s1 = get_stage_top_participant_ids(c, 1, 10) if target_stage >= 2 else set()
+        top3_s2 = get_stage_top_participant_ids(c, 2, 3) if target_stage >= 3 else set()
+
+        for p in all_participants:
+            pid = p["id"]
+            # Questions already answered in this stage
+            answered_this_stage = c.execute("""
+                SELECT COUNT(*) as n FROM responses r
+                JOIN questions q ON q.id = r.question_id
+                WHERE r.participant_id = ? AND q.stage = ?
+            """, (pid, target_stage)).fetchone()["n"]
+
+            total_stage_qs = c.execute("SELECT COUNT(*) as n FROM questions WHERE stage=? AND active=1", (target_stage,)).fetchone()["n"]
+
+            # If user has not completed this stage:
+            if answered_this_stage < total_stage_qs:
+                is_eligible = True
+                if target_stage == 2 and pid not in top10_s1:
+                    is_eligible = False
+                elif target_stage == 3 and pid not in top3_s2:
+                    is_eligible = False
+
+                if is_eligible:
+                    is_online = (p["last_seen"] or 0) >= active_cutoff
+                    p_dict = dict(p)
+                    p_dict["is_online"] = is_online
+                    p_dict["answered_this_stage"] = answered_this_stage
+                    p_dict["total_stage_qs"] = total_stage_qs
+                    waiting_list.append(p_dict)
+
+        return jsonify({
+            "stage": target_stage,
+            "stage_active": s_active,
+            "count": len(waiting_list),
+            "participants": waiting_list
+        })
+
+@app.route("/fullscreen-leaderboard")
+def fullscreen_leaderboard():
+    return render_template("fullscreen_leaderboard.html")
 
 # Admin stage control toggle (Start / Pause Stage for all participants)
 @app.route("/admin/stage-control", methods=["POST"])
