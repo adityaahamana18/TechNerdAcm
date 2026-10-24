@@ -209,11 +209,66 @@ if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
   };
 }
 
-// 2. Window Blur & Dual Monitor Screen-Share Detection
+let isOverlayBlocked = false;
+
+function triggerOverlayAppBlock(reason = "Floating app or display overlay detected") {
+  if (isOverlayBlocked) return;
+  isOverlayBlocked = true;
+  stopTimer();
+
+  const blocker = $("overlayAppBlocker");
+  if (blocker) blocker.style.display = "flex";
+
+  const quizArea = $("quizContainer");
+  if (quizArea) quizArea.style.filter = "blur(24px) brightness(50%)";
+
+  sendSecurityLog("OVERLAY_APP_DETECTED", reason);
+  showViolationWarning("⚠️ Floating window or overlay detected! Quiz paused.");
+}
+
+function resolveOverlayAppBlock() {
+  if (!isOverlayBlocked) return;
+  isOverlayBlocked = false;
+
+  const blocker = $("overlayAppBlocker");
+  if (blocker) blocker.style.display = "none";
+
+  const quizArea = $("quizContainer");
+  if (quizArea) quizArea.style.filter = "none";
+
+  if (currentQuestion && timeLeft > 0) {
+    startTimer(timeLeft);
+  } else {
+    loadQuestion();
+  }
+}
+
+// 2. Strict Focus Loss & Display-Over-Other-Apps Detection
 window.addEventListener("blur", () => {
   if (isQuizStarted) {
-    // If user clicks on another monitor or discord/meet sharing overlay
-    sendSecurityLog("WINDOW_BLUR", "Focus lost to external application / screen");
+    // When a floating bubble, Gemini overlay, or picture-in-picture is touched, window immediately loses focus
+    triggerOverlayAppBlock("Window focus stolen by external floating overlay/app");
+  }
+});
+
+// Periodic Heartbeat to check if document has primary window focus
+setInterval(() => {
+  if (isQuizStarted && !isFullscreenPaused) {
+    if (!document.hasFocus()) {
+      triggerOverlayAppBlock("Browser focus lost (possible floating window/overlay active)");
+    }
+  }
+}, 1000);
+
+// Close overlay handler
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = $("resumeFromOverlayBtn");
+  if (btn) {
+    btn.addEventListener("click", async () => {
+      await requestFullScreen();
+      window.focus();
+      resolveOverlayAppBlock();
+    });
   }
 });
 
