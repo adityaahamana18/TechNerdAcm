@@ -7,6 +7,7 @@ let tabSwitchCount = 0;
 let fullscreenExitCount = 0;
 let isQuizStarted = false;
 let isFullscreenPaused = false;
+let isScreenShareBlocked = false;
 
 async function getJSON(url, options = {}) {
   const r = await fetch(url, options);
@@ -111,6 +112,84 @@ document.addEventListener("visibilitychange", () => {
     tabSwitchCount++;
     showViolationWarning(`Tab switch detected (${tabSwitchCount} time(s))!`);
     sendSecurityLog("TAB_SWITCH", `User switched tab. Total: ${tabSwitchCount}`);
+  }
+});
+
+// Anti-Screenshare / Screen Recording Detection
+function triggerScreenshareBlock(reason = "Screenshare or capture detected") {
+  if (isScreenShareBlocked) return;
+  isScreenShareBlocked = true;
+  stopTimer();
+
+  const blocker = $("screenShareBlocker");
+  if (blocker) blocker.style.display = "flex";
+
+  const quizArea = $("quizContainer");
+  if (quizArea) quizArea.style.filter = "blur(18px) grayscale(80%)";
+
+  sendSecurityLog("SCREENSHARE_ATTEMPT", reason);
+}
+
+function resolveScreenshareBlock() {
+  if (!isScreenShareBlocked) return;
+  isScreenShareBlocked = false;
+
+  const blocker = $("screenShareBlocker");
+  if (blocker) blocker.style.display = "none";
+
+  const quizArea = $("quizContainer");
+  if (quizArea) quizArea.style.filter = "none";
+
+  if (currentQuestion && timeLeft > 0) {
+    startTimer(timeLeft);
+  }
+}
+
+// 1. Prevent Screen Capture API if triggered by apps
+if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+  const originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
+  navigator.mediaDevices.getDisplayMedia = function() {
+    triggerScreenshareBlock("Browser screen-capture API invoked");
+    return Promise.reject(new DOMException("Screen sharing is restricted by Proctor policy.", "NotAllowedError"));
+  };
+}
+
+// 2. Window Blur & Dual Monitor Screen-Share Detection
+window.addEventListener("blur", () => {
+  if (isQuizStarted) {
+    // If user clicks on another monitor or discord/meet sharing overlay
+    sendSecurityLog("WINDOW_BLUR", "Focus lost to external application / screen");
+  }
+});
+
+// 3. Block Developer Tools & Screenshot Shortcuts
+window.addEventListener("keydown", (e) => {
+  if (!isQuizStarted) return;
+
+  // PrintScreen Key
+  if (e.key === "PrintScreen" || e.keyCode === 44) {
+    e.preventDefault();
+    triggerScreenshareBlock("PrintScreen / Screenshot captured");
+    return false;
+  }
+
+  // Windows Key + Shift + S (Snipping Tool) or Alt + PrtScn
+  if ((e.shiftKey && (e.metaKey || e.key === "Meta") && e.key.toLowerCase() === "s") || (e.altKey && e.key === "PrintScreen")) {
+    e.preventDefault();
+    triggerScreenshareBlock("Screen snippet or capture shortcut attempted");
+    return false;
+  }
+
+  // Developer Tools: F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+  if (
+    e.key === "F12" ||
+    (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "i" || e.key === "J" || e.key === "j" || e.key === "C" || e.key === "c")) ||
+    (e.ctrlKey && (e.key === "U" || e.key === "u"))
+  ) {
+    e.preventDefault();
+    sendSecurityLog("DEVTOOLS_ATTEMPT", `Attempted key: ${e.key}`);
+    showViolationWarning("Developer tools and inspect element are disabled!");
+    return false;
   }
 });
 

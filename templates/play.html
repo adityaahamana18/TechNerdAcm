@@ -11,8 +11,9 @@
     </p>
     <ul class="security-rules-list">
       <li><span>🔒</span> <strong>Fullscreen Enforced:</strong> Keep arena fullscreen throughout the quiz.</li>
-      <li><span>⚠️</span> <strong>Tab Tracking:</strong> Switching tabs or minimizing will trigger proctor alerts.</li>
-      <li><span>🚫</span> <strong>Integrity Lock:</strong> Copy, paste, and right-clicks are disabled.</li>
+      <li><span>🚫</span> <strong>Screenshare Prohibited:</strong> Screen-sharing, screen recording, and dual monitors are blocked.</li>
+      <li><span>⚠️</span> <strong>Tab Tracking:</strong> Switching tabs, windows, or minimizing will trigger proctor alerts.</li>
+      <li><span>🛡️</span> <strong>Integrity Lock:</strong> Copy, paste, developer tools, and right-clicks are disabled.</li>
       <li><span>⚡</span> <strong>Live Auto-Scoring:</strong> Immediate server-verified evaluation on each response.</li>
     </ul>
     <button id="enterFsBtn" class="btn primary full" style="margin-top:22px; padding:15px; font-size:12px;">
@@ -21,14 +22,21 @@
   </div>
 </div>
 
-<!-- Warning Toast / Banner for Violations -->
-<div id="violationWarning" class="violation-banner" style="display:none;">
-  <span class="warning-icon">⚠️</span>
-  <div>
-    <strong>Security Alert:</strong> <span id="violationMsg">Suspicious activity detected!</span>
-    <small style="display:block; opacity:0.9; margin-top:2px;">This violation has been logged to the Admin Control Room.</small>
+<!-- Screenshare Violation Overlay (Blurs & Locks Screen if Screen Share/Capture Active) -->
+<div id="screenShareBlocker" class="security-modal-overlay" style="display:none; z-index:999999; backdrop-filter:blur(25px); background:rgba(7,11,20,0.96);">
+  <div class="security-modal panel" style="border-color:var(--danger); box-shadow:0 0 50px rgba(239,68,68,0.3); text-align:center;">
+    <div style="font-size: 52px; margin-bottom: 14px; animation: pulse 1.5s infinite;">🚫</div>
+    <div class="section-kicker" style="color:var(--danger); margin-bottom: 6px;">PROCTOR SECURITY LOCK</div>
+    <h2 style="font-family:'Space Grotesk',sans-serif; font-size:24px; color:#fda4af; margin-bottom:12px;">Screenshare / Recording Detected!</h2>
+    <p class="muted" style="margin-bottom:18px; font-size:14px; line-height:1.6;">
+      Screen sharing, screen recording, or capture tools (Google Meet, Discord, Zoom, OBS, etc.) are strictly prohibited during this event.
+      <br><br>
+      <strong style="color:#ffffff;">The quiz is paused and blurred. Stop screen sharing immediately to resume.</strong>
+    </p>
+    <div style="font-size:12px; color:var(--danger); font-weight:700; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); padding:10px; border-radius:8px;">
+      ⚠️ This incident has been logged with your student name to the Admin Proctor Dashboard.
+    </div>
   </div>
-  <button id="dismissWarningBtn" class="btn ghost" style="padding:6px 14px; font-size:10px; margin-left:auto;">DISMISS</button>
 </div>
 
 <div class="play-layout play-layout-single" id="quizContainer">
