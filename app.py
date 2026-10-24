@@ -1,19 +1,11 @@
-import os, sqlite3, secrets, time
+import os, secrets, time
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
 from werkzeug.security import generate_password_hash, check_password_hash
+from db_adapter import get_db, is_postgres
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "change-this-secret-key-before-deployment")
-
-# DB path supports Render Persistent Disk (e.g. DB_PATH=/data/technerd.db)
-DB = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "technerd.db"))
-db_dir = os.path.dirname(DB)
-if db_dir and not os.path.exists(db_dir):
-    try:
-        os.makedirs(db_dir, exist_ok=True)
-    except Exception as e:
-        print("Warning creating db dir:", e)
 
 RATE_LIMITS = {}
 
@@ -29,79 +21,135 @@ def is_rate_limited(key, max_calls=15, period=5):
     return False
 
 def db():
-    conn = sqlite3.connect(DB, timeout=20.0)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return get_db()
 
 def init_db():
     with db() as c:
-        c.executescript("""
-        CREATE TABLE IF NOT EXISTS admins(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'admin'
-        );
-        CREATE TABLE IF NOT EXISTS stages(
-            stage_num INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            requires_topic_choice INTEGER NOT NULL DEFAULT 0
-        );
-        CREATE TABLE IF NOT EXISTS questions(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            stage INTEGER NOT NULL DEFAULT 1,
-            topic TEXT NOT NULL DEFAULT 'General',
-            question TEXT NOT NULL,
-            a TEXT NOT NULL, b TEXT NOT NULL, c TEXT NOT NULL, d TEXT NOT NULL,
-            answer TEXT NOT NULL CHECK(answer IN ('a','b','c','d')),
-            points INTEGER NOT NULL DEFAULT 10,
-            seconds INTEGER NOT NULL DEFAULT 25,
-            active INTEGER NOT NULL DEFAULT 1
-        );
-        CREATE TABLE IF NOT EXISTS settings(
-            key TEXT PRIMARY KEY, value TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS participants(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT DEFAULT '',
-            photo_url TEXT DEFAULT '',
-            team TEXT NOT NULL DEFAULT '',
-            access_code TEXT NOT NULL,
-            chosen_topic TEXT DEFAULT '',
-            joined_at REAL NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS responses(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            participant_id INTEGER NOT NULL,
-            question_id INTEGER NOT NULL,
-            choice TEXT NOT NULL,
-            correct INTEGER NOT NULL,
-            points INTEGER NOT NULL,
-            answered_at REAL NOT NULL,
-            UNIQUE(participant_id, question_id),
-            FOREIGN KEY(participant_id) REFERENCES participants(id),
-            FOREIGN KEY(question_id) REFERENCES questions(id)
-        );
-        CREATE TABLE IF NOT EXISTS security_logs(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            participant_id INTEGER,
-            event_type TEXT NOT NULL,
-            details TEXT NOT NULL,
-            created_at REAL NOT NULL,
-            FOREIGN KEY(participant_id) REFERENCES participants(id)
-        );
-        """)
+        if is_postgres():
+            # PostgreSQL schema for Supabase
+            c.executescript("""
+            CREATE TABLE IF NOT EXISTS admins(
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'admin'
+            );
+            CREATE TABLE IF NOT EXISTS stages(
+                stage_num INT PRIMARY KEY,
+                name TEXT NOT NULL,
+                requires_topic_choice INT NOT NULL DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS questions(
+                id SERIAL PRIMARY KEY,
+                stage INT NOT NULL DEFAULT 1,
+                topic TEXT NOT NULL DEFAULT 'General',
+                question TEXT NOT NULL,
+                a TEXT NOT NULL, b TEXT NOT NULL, c TEXT NOT NULL, d TEXT NOT NULL,
+                answer TEXT NOT NULL,
+                points INT NOT NULL DEFAULT 10,
+                seconds INT NOT NULL DEFAULT 25,
+                active INT NOT NULL DEFAULT 1
+            );
+            CREATE TABLE IF NOT EXISTS settings(
+                key TEXT PRIMARY KEY, value TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS participants(
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                email TEXT DEFAULT '',
+                photo_url TEXT DEFAULT '',
+                team TEXT NOT NULL DEFAULT '',
+                access_code TEXT NOT NULL,
+                chosen_topic TEXT DEFAULT '',
+                joined_at DOUBLE PRECISION NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS responses(
+                id SERIAL PRIMARY KEY,
+                participant_id INT NOT NULL,
+                question_id INT NOT NULL,
+                choice TEXT NOT NULL,
+                correct INT NOT NULL,
+                points INT NOT NULL,
+                answered_at DOUBLE PRECISION NOT NULL,
+                UNIQUE(participant_id, question_id)
+            );
+            CREATE TABLE IF NOT EXISTS security_logs(
+                id SERIAL PRIMARY KEY,
+                participant_id INT,
+                event_type TEXT NOT NULL,
+                details TEXT NOT NULL,
+                created_at DOUBLE PRECISION NOT NULL
+            );
+            """)
+        else:
+            # SQLite schema for local development
+            c.executescript("""
+            CREATE TABLE IF NOT EXISTS admins(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'admin'
+            );
+            CREATE TABLE IF NOT EXISTS stages(
+                stage_num INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                requires_topic_choice INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS questions(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                stage INTEGER NOT NULL DEFAULT 1,
+                topic TEXT NOT NULL DEFAULT 'General',
+                question TEXT NOT NULL,
+                a TEXT NOT NULL, b TEXT NOT NULL, c TEXT NOT NULL, d TEXT NOT NULL,
+                answer TEXT NOT NULL CHECK(answer IN ('a','b','c','d')),
+                points INTEGER NOT NULL DEFAULT 10,
+                seconds INTEGER NOT NULL DEFAULT 25,
+                active INTEGER NOT NULL DEFAULT 1
+            );
+            CREATE TABLE IF NOT EXISTS settings(
+                key TEXT PRIMARY KEY, value TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS participants(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT DEFAULT '',
+                photo_url TEXT DEFAULT '',
+                team TEXT NOT NULL DEFAULT '',
+                access_code TEXT NOT NULL,
+                chosen_topic TEXT DEFAULT '',
+                joined_at REAL NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS responses(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                participant_id INTEGER NOT NULL,
+                question_id INTEGER NOT NULL,
+                choice TEXT NOT NULL,
+                correct INTEGER NOT NULL,
+                points INTEGER NOT NULL,
+                answered_at REAL NOT NULL,
+                UNIQUE(participant_id, question_id),
+                FOREIGN KEY(participant_id) REFERENCES participants(id),
+                FOREIGN KEY(question_id) REFERENCES questions(id)
+            );
+            CREATE TABLE IF NOT EXISTS security_logs(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                participant_id INTEGER,
+                event_type TEXT NOT NULL,
+                details TEXT NOT NULL,
+                created_at REAL NOT NULL,
+                FOREIGN KEY(participant_id) REFERENCES participants(id)
+            );
+            """)
 
         # Seed default 3 stages configuration
-        c.execute("INSERT OR IGNORE INTO stages(stage_num, name, requires_topic_choice) VALUES(1, 'CS Fundamentals', 0)")
-        c.execute("INSERT OR IGNORE INTO stages(stage_num, name, requires_topic_choice) VALUES(2, 'Core Systems & Architecture', 0)")
-        c.execute("INSERT OR IGNORE INTO stages(stage_num, name, requires_topic_choice) VALUES(3, 'Specialization Domain', 1)")
+        for snum, sname, req in [(1, 'CS Fundamentals', 0), (2, 'Core Systems & Architecture', 0), (3, 'Specialization Domain', 1)]:
+            c.execute("INSERT INTO stages(stage_num, name, requires_topic_choice) VALUES(?,?,?) ON CONFLICT(stage_num) DO NOTHING", (snum, sname, req))
 
-        c.execute("INSERT OR IGNORE INTO settings(key,value) VALUES('event_code','TECH2026')")
+        c.execute("INSERT INTO settings(key,value) VALUES('event_code','TECH2026') ON CONFLICT(key) DO NOTHING")
 
         # Auto-seed base questions if questions table is fresh/empty
-        q_count = c.execute("SELECT COUNT(*) n FROM questions").fetchone()["n"]
+        q_count_row = c.execute("SELECT COUNT(*) as n FROM questions").fetchone()
+        q_count = q_count_row["n"] if isinstance(q_count_row, dict) else q_count_row[0]
         if q_count == 0:
             sample_questions = [
                 (1, "CS Fundamentals", "Which data structure follows LIFO (Last In First Out)?", "Queue", "Stack", "Tree", "Graph", "b", 10, 25),
