@@ -1,0 +1,427 @@
+{% extends "base.html" %}{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+<div class="admin-head">
+ <div>
+  <div class="section-kicker">TECHNERD / COMMAND CENTER</div>
+  <h1>Admin <span class="gradient-text">Dashboard</span></h1>
+  <p class="muted">Signed in as <strong style="color:var(--cyan)">{{ session.get('admin_email') }}</strong> · 3-Stage Progressive Arena</p>
+ </div>
+ <div style="display:flex; gap:12px; align-items:center;">
+   <a class="btn primary" href="{{ url_for('play') }}" target="_blank" title="Test quiz as student in new window">OPEN QUIZ ARENA ↗</a>
+   <a class="btn ghost" href="{{ url_for('admin_logout') }}">LOG OUT ↗</a>
+ </div>
+</div>
+
+<div class="stats-grid">
+ <div class="stat panel"><small>TOTAL QUESTIONS</small><strong>{{ questions|length }}</strong></div>
+ <div class="stat panel"><small>REGISTERED PARTICIPANTS</small><strong>{{ participants }}</strong></div>
+ <div class="stat panel"><small>TOTAL RESPONSES</small><strong>{{ total_responses }}</strong></div>
+ <div class="stat panel"><small>SECURITY ALERTS</small><strong style="color:var(--danger)">{{ total_alerts }}</strong></div>
+</div>
+
+<!-- Event Code & Reset Controls -->
+<section class="panel admin-section">
+ <div class="section-heading">
+  <div>
+   <div class="section-kicker">EVENT ACCESS CONTROL</div>
+   <h2>Event Settings & Data Management</h2>
+  </div>
+ </div>
+ <div style="display:flex; gap:20px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-top:14px;">
+  <form method="post" action="{{ url_for('update_event_code') }}" style="display:flex; gap:12px; align-items:center;">
+    <label style="margin:0; font-size:11px; display:flex; align-items:center; gap:8px;">
+      EVENT PASSCODE:
+      <input type="text" name="event_code" value="{{ event_code }}" style="width:160px; text-transform:uppercase; letter-spacing:1px; font-weight:700;" required>
+    </label>
+    <button class="btn primary" type="submit">UPDATE CODE</button>
+  </form>
+
+  <form method="post" action="{{ url_for('reset_scores') }}" onsubmit="return confirm('⚠️ CAUTION: This will permanently wipe ALL participants, submitted answers, and security logs. Are you sure you want to reset everything?')">
+    <button class="btn danger-outline" type="submit">↻ WIPE & RESET PARTICIPANTS & SCORES</button>
+  </form>
+ </div>
+</section>
+
+<!-- STAGES & TOPICS MANAGEMENT -->
+<section class="panel admin-section" style="border-color: rgba(56, 189, 248, 0.35); box-shadow: 0 10px 30px rgba(56, 189, 248, 0.05);">
+  <div class="section-heading">
+    <div>
+      <div class="section-kicker" style="color:var(--cyan);">STAGE & TOPIC CONFIGURATION</div>
+      <h2>Stage Architecture & Selection Mode</h2>
+    </div>
+    <span class="live-badge" style="border-color:rgba(56, 189, 248, 0.4); color:var(--cyan); background:rgba(56,189,248,0.12);">
+      <i></i> {{ stages|length }} ACTIVE STAGES
+    </span>
+  </div>
+  <p class="muted" style="margin-top:6px;">Add, rename, or reconfigure quiz stages. Enabling "Requires Topic Selection" prompts the student with a topic selection intermission before entering that stage.</p>
+
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:18px; margin-top:20px;">
+    <!-- Configured Stages List -->
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <h3 style="font-size:14px; letter-spacing:1px; text-transform:uppercase; color:var(--text-bright); margin:0;">Configured Stages</h3>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        {% for s in stages %}
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="q-number" style="font-size:11px; width:30px; height:30px; border-radius:6px;">S{{ s.stage_num }}</span>
+              <strong style="color:var(--text-bright); font-size:14px;">{{ s.name }}</strong>
+            </div>
+            <div style="margin-top:6px; font-size:11px; display:flex; gap:8px; align-items:center;">
+              {% if s.requires_topic_choice %}
+              <span style="color:var(--cyan); background:rgba(56,189,248,0.12); padding:2px 8px; border-radius:4px; font-weight:700;">🎯 Requires Topic Selection</span>
+              {% else %}
+              <span style="color:#94a3b8; background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:4px;">Direct Questions</span>
+              {% endif %}
+            </div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="icon-btn" title="Edit this stage" style="color:var(--cyan); border-color:rgba(56,189,248,0.4);" 
+                    onclick='editStageModal({{ s|tojson|safe }})'>✎</button>
+            <form method="post" action="{{ url_for('delete_stage', snum=s.stage_num) }}" onsubmit="return confirm('⚠️ CAUTION: Delete Stage {{ s.stage_num }} and ALL questions inside it?')">
+              <button class="icon-btn" title="Delete stage and its questions" style="color:var(--danger); border-color:rgba(244,63,94,0.4);">×</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Add / Edit Stage Form -->
+    <div style="background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:18px;">
+      <h3 id="stageFormTitle" style="font-size:14px; letter-spacing:1px; text-transform:uppercase; color:var(--text-bright); margin-top:0; margin-bottom:14px;">Add / Edit Stage</h3>
+      <form id="stageForm" method="post" action="{{ url_for('add_or_update_stage') }}" class="stack-form">
+        <label>STAGE NUMBER (ORDER)
+          <input type="number" id="stageNumInput" name="stage_num" min="1" max="20" value="{{ stages|length + 1 }}" required style="font-weight:700;">
+        </label>
+        <label>STAGE DISPLAY NAME
+          <input type="text" id="stageNameInput" name="name" placeholder="e.g. Rapid Fire Round or Advanced Topics" required>
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin-top:4px;">
+          <input type="checkbox" id="stageTopicReqInput" name="requires_topic_choice" value="1" style="width:18px; height:18px; accent-color:var(--cyan);">
+          <span style="font-size:12px; color:var(--text-bright);">Requires Student Topic Selection before start</span>
+        </label>
+        <div style="display:flex; gap:10px; margin-top:12px;">
+          <button id="stageSubmitBtn" class="btn primary full" type="submit">＋ SAVE STAGE</button>
+          <button id="stageCancelBtn" class="btn ghost" type="button" style="display:none;" onclick="cancelStageEdit()">CANCEL</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- Security Suspicious Activity Monitor -->
+<section class="panel admin-section" style="border-color: rgba(244, 63, 94, 0.35); box-shadow: 0 10px 30px rgba(244, 63, 94, 0.05);">
+ <div class="section-heading">
+  <div>
+   <div class="section-kicker" style="color:var(--danger);">PROCTOR LOGS & ALERTS</div>
+   <h2>Suspicious Activity Monitor</h2>
+  </div>
+  <span class="live-badge" style="border-color:rgba(244, 63, 94, 0.4); color:#fda4af; background:rgba(225,29,72,0.12);">
+    <i style="background:var(--danger); box-shadow:0 0 8px var(--danger);"></i> REAL-TIME MONITORING
+  </span>
+ </div>
+ <p class="muted" style="margin-top:6px;">Live alert log for tab switches, window minimizes, fullscreen exits, fast bot answers, and copy attempts.</p>
+ 
+ <div id="securityLogsList" style="max-height: 280px; overflow-y: auto; margin-top: 15px; display:flex; flex-direction:column; gap:8px;">
+  <p class="muted">Loading security logs…</p>
+ </div>
+</section>
+
+<!-- Real-Time Server-Verified Leaderboard -->
+<section class="panel admin-section">
+ <div class="section-heading">
+  <div>
+   <div class="section-kicker">LIVE PERFORMANCE BOARD</div>
+   <h2>Real-Time Leaderboard</h2>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center;">
+    <span class="live-badge"><i></i> AUTO REFRESHING</span>
+    <a href="{{ url_for('admin_participants') }}" class="text-link" target="_blank">Export Raw JSON ↗</a>
+  </div>
+ </div>
+ 
+ <div id="adminLeaderboardList" class="leader-rows" style="max-height: 480px; overflow-y: auto; margin-top: 15px;">
+  <p class="muted">Loading leaderboard…</p>
+ </div>
+</section>
+
+<div class="admin-grid">
+ <!-- Add Question Form with Stage & Topic Selection -->
+ <section class="panel admin-section">
+  <div class="section-kicker">QUESTION BUILDER (3-STAGE)</div>
+  <h2 id="builderTitle">Add New Question</h2>
+  <form id="questionForm" method="post" action="{{ url_for('add_question') }}" class="stack-form">
+   <input type="hidden" id="editQid" name="edit_qid" value="">
+
+   <div class="form-two">
+     <label>SELECT STAGE
+       <select id="fStage" name="stage" onchange="handleStageChange(this.value)">
+         {% for s in stages %}
+         <option value="{{ s.stage_num }}">Stage {{ s.stage_num }}: {{ s.name }} {% if s.requires_topic_choice %}(Topic Selection){% endif %}</option>
+         {% endfor %}
+       </select>
+     </label>
+     <label>TOPIC / DOMAIN
+       <input id="fTopic" name="topic" list="existingTopics" value="CS Fundamentals" placeholder="e.g. Artificial Intelligence / Cloud" required>
+       <datalist id="existingTopics">
+         {% set seen = [] %}
+         {% for q in questions %}
+           {% if q.topic and q.topic not in seen %}
+             <option value="{{ q.topic }}">
+             {% set _ = seen.append(q.topic) %}
+           {% endif %}
+         {% endfor %}
+       </datalist>
+     </label>
+   </div>
+
+   <label>QUESTION PROMPT
+     <textarea id="fQuestion" name="question" rows="3" required placeholder="Type the question prompt here…"></textarea>
+   </label>
+   
+   <div class="form-two">
+     <label>OPTION A<input id="fOptA" name="a" required placeholder="Option A text"></label>
+     <label>OPTION B<input id="fOptB" name="b" required placeholder="Option B text"></label>
+     <label>OPTION C<input id="fOptC" name="c" required placeholder="Option C text"></label>
+     <label>OPTION D<input id="fOptD" name="d" required placeholder="Option D text"></label>
+   </div>
+   
+   <div class="form-three">
+     <label>CORRECT ANSWER
+       <select id="fAnswer" name="answer">
+         <option value="a">Option A</option>
+         <option value="b">Option B</option>
+         <option value="c">Option C</option>
+         <option value="d">Option D</option>
+       </select>
+     </label>
+     <label>POINTS
+       <input id="fPoints" type="number" name="points" min="1" max="1000" value="10">
+     </label>
+     <label>TIMER (SECONDS)
+       <input id="fSeconds" type="number" name="seconds" min="5" max="300" value="25">
+     </label>
+   </div>
+   
+   <div style="display:flex; gap:10px; margin-top:6px;">
+     <button id="saveBtn" class="btn primary full" type="submit">＋ SAVE QUESTION</button>
+     <button id="cancelEditBtn" class="btn ghost" type="button" style="display:none;" onclick="cancelEdit()">CANCEL</button>
+   </div>
+  </form>
+ </section>
+
+ <!-- Question Bank & Actions -->
+ <section class="panel admin-section">
+  <div class="section-heading" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div>
+      <div class="section-kicker">QUESTION BANK</div>
+      <h2>Configured Questions <span class="muted">({{ questions|length }})</span></h2>
+    </div>
+    <!-- Stage Filter Dropdown -->
+    <div style="display:flex; align-items:center; gap:8px;">
+      <label style="margin:0; font-size:11px; color:#94a3b8; font-weight:700;">FILTER BY STAGE:</label>
+      <select id="stageFilterSelect" onchange="filterQuestionsByStage(this.value)" style="padding:6px 12px; font-size:12px; border-radius:6px; background:rgba(0,0,0,0.5); border:1px solid rgba(56,189,248,0.3); color:var(--text-bright); outline:none;">
+        <option value="ALL">All Stages ({{ questions|length }})</option>
+        {% for s in stages %}
+        <option value="{{ s.stage_num }}">Stage {{ s.stage_num }}: {{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="question-list" style="margin-top:14px;">
+   {% for q in questions %}
+   <article class="question-item q-stage-card" id="q-card-{{ q.id }}" data-stage="{{ q.stage }}">
+     <div class="q-number" title="Stage {{ q.stage }}">S{{ q.stage }}</div>
+     <div class="q-body">
+       <b>{{ q.question }}</b>
+       <div style="display:flex; gap:8px; align-items:center; margin-top:4px; flex-wrap:wrap;">
+         <span style="font-size:10px; font-weight:700; color:var(--cyan); background:rgba(56,189,248,0.12); padding:2px 8px; border-radius:4px;">Stage {{ q.stage }}</span>
+         <span style="font-size:10px; font-weight:700; color:#c084fc; background:rgba(192,132,252,0.12); padding:2px 8px; border-radius:4px;">🎯 {{ q.topic }}</span>
+         <span style="font-size:10px; color:#94a3b8;">{{ q.points }} pts · {{ q.seconds }}s</span>
+         <span style="font-size:10px; color:var(--green); font-weight:700;">Answer: {{ q.answer|upper }}</span>
+       </div>
+       <small style="color:#64748b; margin-top:4px; display:block;">
+         A: {{ q.a }} | B: {{ q.b }} | C: {{ q.c }} | D: {{ q.d }}
+       </small>
+     </div>
+     <div style="display:flex; gap:8px;">
+       <button class="icon-btn" title="Edit this question" style="color:var(--cyan); border-color:rgba(56,189,248,0.4);" 
+               onclick='startEdit({{ q|tojson|safe }})'>✎</button>
+       <form method="post" action="{{ url_for('delete_question', qid=q.id) }}" onsubmit="return confirm('Delete this question and all its student answers?')">
+         <button class="icon-btn" title="Delete question">×</button>
+       </form>
+     </div>
+   </article>
+   {% else %}
+   <p class="muted">No questions yet. Add one using the form on the left.</p>
+   {% endfor %}
+  </div>
+ </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function filterQuestionsByStage(stageVal) {
+    const cards = document.querySelectorAll('.q-stage-card');
+    cards.forEach(card => {
+      if (stageVal === 'ALL' || card.getAttribute('data-stage') === String(stageVal)) {
+        card.style.display = 'flex';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+
+  function editStageModal(s) {
+    document.getElementById("stageFormTitle").textContent = `Edit Stage ${s.stage_num}`;
+    document.getElementById("stageNumInput").value = s.stage_num;
+    document.getElementById("stageNameInput").value = s.name;
+    document.getElementById("stageTopicReqInput").checked = Boolean(s.requires_topic_choice);
+    document.getElementById("stageSubmitBtn").textContent = "💾 UPDATE STAGE";
+    document.getElementById("stageCancelBtn").style.display = "inline-flex";
+    document.getElementById("stageForm").scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function cancelStageEdit() {
+    document.getElementById("stageFormTitle").textContent = "Add / Edit Stage";
+    document.getElementById("stageNumInput").value = "{{ stages|length + 1 }}";
+    document.getElementById("stageNameInput").value = "";
+    document.getElementById("stageTopicReqInput").checked = false;
+    document.getElementById("stageSubmitBtn").textContent = "＋ SAVE STAGE";
+    document.getElementById("stageCancelBtn").style.display = "none";
+  }
+
+  function handleStageChange(val) {
+    const topicInput = document.getElementById("fTopic");
+    if (val === "1") topicInput.value = "CS Fundamentals";
+    else if (val === "2") topicInput.value = "Core Systems";
+    else if (val === "3" && (topicInput.value === "CS Fundamentals" || topicInput.value === "Core Systems")) {
+      topicInput.value = "Artificial Intelligence";
+    }
+  }
+
+  function startEdit(q) {
+    document.getElementById("builderTitle").textContent = `Edit Question #${q.id}`;
+    const form = document.getElementById("questionForm");
+    form.action = `/admin/question/${q.id}/edit`;
+    document.getElementById("fStage").value = q.stage || 1;
+    document.getElementById("fTopic").value = q.topic || "General";
+    document.getElementById("fQuestion").value = q.question;
+    document.getElementById("fOptA").value = q.a;
+    document.getElementById("fOptB").value = q.b;
+    document.getElementById("fOptC").value = q.c;
+    document.getElementById("fOptD").value = q.d;
+    document.getElementById("fAnswer").value = q.answer;
+    document.getElementById("fPoints").value = q.points;
+    document.getElementById("fSeconds").value = q.seconds;
+    document.getElementById("saveBtn").textContent = "💾 UPDATE QUESTION";
+    document.getElementById("cancelEditBtn").style.display = "inline-flex";
+    form.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function cancelEdit() {
+    document.getElementById("builderTitle").textContent = "Add New Question";
+    const form = document.getElementById("questionForm");
+    form.action = "{{ url_for('add_question') }}";
+    form.reset();
+    document.getElementById("saveBtn").textContent = "＋ SAVE QUESTION";
+    document.getElementById("cancelEditBtn").style.display = "none";
+  }
+
+  // Real-Time Leaderboard Fetcher with Stage 3 Chosen Topic Badge
+  async function refreshAdminLeaderboard() {
+    try {
+      const res = await fetch("/api/leaderboard");
+      if (!res.ok) return;
+      const rows = await res.json();
+      const host = document.getElementById("adminLeaderboardList");
+      if (!host) return;
+      if (!rows.length) {
+        host.innerHTML = '<p class="muted">No participant responses recorded yet.</p>';
+        return;
+      }
+      host.innerHTML = "";
+      rows.forEach((p, idx) => {
+        const row = document.createElement("div");
+        row.className = "leader-row";
+        const rank = document.createElement("span");
+        rank.className = "rank" + (idx < 3 ? " top" : "");
+        rank.textContent = String(idx + 1).padStart(2, "0");
+
+        const nameWrap = document.createElement("div");
+        const name = document.createElement("div");
+        name.className = "player-name";
+        name.innerHTML = `
+          ${p.name} ${p.email ? `<span style="font-weight:400;color:#94a3b8;font-size:11px;margin-left:6px;">(${p.email})</span>` : ''}
+          ${p.chosen_topic ? `<span style="font-size:9px; font-weight:700; color:var(--cyan); border:1px solid rgba(56,189,248,0.3); background:rgba(56,189,248,0.1); border-radius:4px; padding:1px 6px; margin-left:6px;">Stage 3: ${p.chosen_topic}</span>` : ''}
+        `;
+        
+        const team = document.createElement("div");
+        team.className = "player-team";
+        team.textContent = `Team: ${p.team || "Solo"} · Answered: ${p.answered || 0} · Correct: ${p.correct || 0}`;
+        nameWrap.append(name, team);
+
+        const score = document.createElement("strong");
+        score.className = "score";
+        score.textContent = `${p.score} pts`;
+
+        row.append(rank, nameWrap, score);
+        host.append(row);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Real-Time Security Logs Fetcher
+  async function refreshSecurityLogs() {
+    try {
+      const res = await fetch("/api/admin/security-logs");
+      if (!res.ok) return;
+      const logs = await res.json();
+      const host = document.getElementById("securityLogsList");
+      if (!host) return;
+      if (!logs.length) {
+        host.innerHTML = '<p class="muted">No security events recorded yet.</p>';
+        return;
+      }
+      host.innerHTML = "";
+      logs.forEach(log => {
+        const item = document.createElement("div");
+        item.style.padding = "10px 14px";
+        item.style.borderRadius = "8px";
+        item.style.fontSize = "12px";
+        item.style.display = "flex";
+        item.style.justifyContent = "space-between";
+        item.style.alignItems = "center";
+        item.style.border = "1px solid rgba(255, 255, 255, 0.06)";
+
+        const isAlert = log.event_type !== "PARTICIPANT_JOINED";
+        item.style.background = isAlert ? "rgba(244, 63, 94, 0.08)" : "rgba(14, 165, 233, 0.05)";
+        if (isAlert) item.style.borderColor = "rgba(244, 63, 94, 0.25)";
+
+        const timeStr = new Date(log.created_at * 1000).toLocaleTimeString();
+        item.innerHTML = `
+          <div>
+            <strong style="color:${isAlert ? 'var(--danger)' : 'var(--cyan)'}; font-size:11px;">[${log.event_type}]</strong>
+            <span style="font-weight:600; margin-left:6px;">${log.name || 'Anonymous'} (${log.email || 'N/A'}):</span>
+            <span style="color:#cbd5e1; margin-left:6px;">${log.details}</span>
+          </div>
+          <span style="color:#64748b; font-size:10px; white-space:nowrap; margin-left:12px;">${timeStr}</span>
+        `;
+        host.append(item);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  refreshAdminLeaderboard();
+  refreshSecurityLogs();
+  setInterval(refreshAdminLeaderboard, 2500);
+  setInterval(refreshSecurityLogs, 2500);
+</script>
+{% endblock %}

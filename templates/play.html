@@ -1,0 +1,78 @@
+{% extends "base.html" %}{% block title %}Live Quiz{% endblock %}
+{% block content %}
+<!-- Fullscreen Mode Prompt Modal -->
+<div id="fsModal" class="security-modal-overlay">
+  <div class="security-modal panel">
+    <div style="font-size: 42px; margin-bottom: 12px; filter: drop-shadow(0 0 16px rgba(56,189,248,0.5));">🛡️</div>
+    <div class="section-kicker" style="text-align: center; margin-bottom: 6px;">TECHNERD PROCTOR SYSTEM</div>
+    <h2 id="fsModalTitle" style="font-family:'Space Grotesk',sans-serif; font-size:26px; margin-bottom:12px; text-align:center;">Enter Quiz Arena</h2>
+    <p id="fsModalSubtitle" class="muted" style="margin-bottom:20px; text-align:center; font-size:14px;">
+      To ensure absolute fairness, this technical round is monitored in <strong>fullscreen proctored mode</strong>.
+    </p>
+    <ul class="security-rules-list">
+      <li><span>🔒</span> <strong>Fullscreen Enforced:</strong> Keep arena fullscreen throughout the quiz.</li>
+      <li><span>⚠️</span> <strong>Tab Tracking:</strong> Switching tabs or minimizing will trigger proctor alerts.</li>
+      <li><span>🚫</span> <strong>Integrity Lock:</strong> Copy, paste, and right-clicks are disabled.</li>
+      <li><span>⚡</span> <strong>Live Auto-Scoring:</strong> Immediate server-verified evaluation on each response.</li>
+    </ul>
+    <button id="enterFsBtn" class="btn primary full" style="margin-top:22px; padding:15px; font-size:12px;">
+      ENTER FULLSCREEN & RESUME QUIZ ⛶
+    </button>
+  </div>
+</div>
+
+<!-- Warning Toast / Banner for Violations -->
+<div id="violationWarning" class="violation-banner" style="display:none;">
+  <span class="warning-icon">⚠️</span>
+  <div>
+    <strong>Security Alert:</strong> <span id="violationMsg">Suspicious activity detected!</span>
+    <small style="display:block; opacity:0.9; margin-top:2px;">This violation has been logged to the Admin Control Room.</small>
+  </div>
+  <button id="dismissWarningBtn" class="btn ghost" style="padding:6px 14px; font-size:10px; margin-left:auto;">DISMISS</button>
+</div>
+
+<div class="play-layout play-layout-single" id="quizContainer">
+ <section class="quiz-column">
+  <div class="section-kicker" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+    <span style="display:flex; align-items:center; gap:8px;">
+      <span class="live-dot"></span>
+      TECHNERD ARENA <span id="roundLabel" style="color:var(--cyan); font-weight:800;">QUESTION 1</span>
+    </span>
+    <span id="playerScore" style="color:var(--cyan);font-weight:800;font-size:14px;letter-spacing:1.2px;background:rgba(56,189,248,0.1);padding:6px 12px;border-radius:8px;border:1px solid rgba(56,189,248,0.25);">0 PTS</span>
+  </div>
+
+  <div class="quiz-card panel no-copy">
+   <div class="quiz-top">
+     <div style="display:flex; align-items:center; gap:10px;">
+       <span class="pill" id="statusPill">PROCTORED</span>
+       <span class="fs-indicator" id="fsStatusBadge" title="Fullscreen status">⛶ FULLSCREEN</span>
+     </div>
+     <div class="timer"><small>SECONDS</small><strong id="timer">--</strong></div>
+   </div>
+
+   <div class="progress-track"><div id="progressBar"></div></div>
+
+   <div class="question-header">
+     <span class="question-count" id="questionCount">LOADING QUESTION…</span>
+     <h2 id="questionText">Preparing your quiz questions…</h2>
+   </div>
+
+   <div class="options" id="options"></div>
+
+   <p class="feedback" id="feedback" aria-live="polite"></p>
+  </div>
+
+  <div class="tip-line" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+    <span>⚡ Instant server-verified scoring. Think fast and choose carefully.</span>
+    <span style="color:#64748b; font-size:11px; display:inline-flex; align-items:center; gap:5px;">
+      <span style="width:6px; height:6px; border-radius:50%; background:var(--cyan); display:inline-block;"></span> 
+      Proctored Session
+    </span>
+  </div>
+ </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='play.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,198 @@
+{% extends "base.html" %}{% block title %}Join the Arena{% endblock %}
+{% block content %}
+<div class="homepage-wrapper">
+  <!-- Glowing Hero Section -->
+  <section class="hero">
+    <div class="hero-badge-pill">
+      <span class="live-dot"></span>
+      <span>MITS ACM STUDENT CHAPTER PRESENTS</span>
+    </div>
+
+    <h1>TECH<span class="gradient-text glow-effect">NERD</span> <span class="year-sub">2026</span></h1>
+    
+    <p class="hero-tagline">
+      THINK <span class="dot">•</span> DECODE <span class="dot">•</span> DEBUG <span class="dot">•</span> CONQUER
+    </p>
+    
+    <p class="hero-copy">
+      The ultimate arena for engineering minds. Real-time timed questions, speed scoring, and live proctored evaluation.
+    </p>
+
+    <div class="hero-tags">
+      <div class="hero-tag-item"><span>⚡</span> SPEED CODING & CS</div>
+      <div class="hero-tag-item"><span>🤖</span> EMERGING AI & TECH</div>
+      <div class="hero-tag-item"><span>🛡️</span> PROCTORED FAIR PLAY</div>
+      <div class="hero-tag-item"><span>🏆</span> INSTANT EVALUATION</div>
+    </div>
+  </section>
+
+  <!-- Join Arena Card -->
+  <section class="join-card panel modern-glass">
+    <div class="section-kicker">
+      <span>PLAYER GATEWAY</span>
+      <span class="kicker-pill">STAGE 01</span>
+    </div>
+    
+    <h2>Enter the Arena</h2>
+    <p class="muted">Sign in with your Google account to unlock your personalized quiz stream.</p>
+
+    <!-- Firebase Google Sign-In Section -->
+    <div id="firebaseAuthSection" class="auth-action-area">
+      <button id="googleSignInBtn" type="button" class="btn google-btn full glow-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" style="margin-right: 10px; flex-shrink: 0;">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span>CONTINUE WITH GOOGLE</span>
+      </button>
+    </div>
+
+    <!-- Signed In Profile Badge & Passcode Form -->
+    <form id="joinForm" action="{{ url_for('join') }}" method="post" class="stack-form" style="display: none;">
+      <div class="user-profile-badge modern-badge">
+        <img id="userAvatar" src="" alt="avatar" class="avatar-circle">
+        <div style="min-width: 0;">
+          <div id="displayUserName" class="user-badge-name"></div>
+          <div id="displayUserEmail" class="user-badge-email"></div>
+        </div>
+        <button type="button" id="changeAccountBtn" class="change-account-btn">Switch</button>
+      </div>
+
+      <input type="hidden" name="name" id="nameInput">
+      <input type="hidden" name="email" id="emailInput">
+      <input type="hidden" name="photo_url" id="photoInput">
+
+      <label>
+        <span>TEAM NAME <small class="optional">(OPTIONAL)</small></span>
+        <input name="team" maxlength="60" placeholder="e.g. Byte Busters / Leave blank for Solo">
+      </label>
+
+      <label>
+        <span>EVENT PASSCODE <span style="color:var(--cyan)">*</span></span>
+        <input name="code" placeholder="Enter event code (e.g. TECH2026)" required style="text-transform: uppercase; font-weight:700; letter-spacing:1.5px;">
+      </label>
+
+      <button class="btn primary full start-quiz-btn" type="submit">
+        <span>ENTER TECHNERD ARENA</span> 
+        <span class="btn-arrow">↗</span>
+      </button>
+    </form>
+
+    <div class="secure-note">
+      <span class="shield-mini">🛡️</span>
+      <span>Anti-cheat monitoring, single-question reveal & instant scoring active.</span>
+    </div>
+  </section>
+
+  <!-- Interactive Feature Highlights Grid -->
+  <section class="feature-grid">
+    <div class="feature-box panel">
+      <div class="f-icon">⏱️</div>
+      <div class="f-content">
+        <b>Precision Timed Rounds</b>
+        <p>Each question has its own dedicated countdown with instant dynamic score calculation.</p>
+      </div>
+    </div>
+
+    <div class="feature-box panel">
+      <div class="f-icon">🛡️</div>
+      <div class="f-content">
+        <b>Proctored Environment</b>
+        <p>Fullscreen lock with automated tab-switch and screen activity tracking for 100% fair play.</p>
+      </div>
+    </div>
+
+    <div class="feature-box panel">
+      <div class="f-icon">📊</div>
+      <div class="f-content">
+        <b>Live Command Room</b>
+        <p>Server-side score validation with real-time updates directly to the official leaderboard.</p>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Firebase App and Auth SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
+<script src="{{ url_for('static', filename='firebase-config.js') }}"></script>
+<script>
+  (function() {
+    if (typeof firebaseConfig !== "undefined" && firebaseConfig.apiKey) {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+    }
+
+    const googleBtn = document.getElementById('googleSignInBtn');
+    const authSection = document.getElementById('firebaseAuthSection');
+    const joinForm = document.getElementById('joinForm');
+    const nameInput = document.getElementById('nameInput');
+    const emailInput = document.getElementById('emailInput');
+    const photoInput = document.getElementById('photoInput');
+    const displayUserName = document.getElementById('displayUserName');
+    const displayUserEmail = document.getElementById('displayUserEmail');
+    const userAvatar = document.getElementById('userAvatar');
+    const changeAccountBtn = document.getElementById('changeAccountBtn');
+
+    function showUserSignedIn(user) {
+      nameInput.value = user.displayName || user.email.split('@')[0];
+      emailInput.value = user.email || '';
+      photoInput.value = user.photoURL || '';
+      displayUserName.textContent = nameInput.value;
+      displayUserEmail.textContent = user.email || '';
+      userAvatar.src = user.photoURL || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="%2338bdf8"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+      
+      authSection.style.display = 'none';
+      joinForm.style.display = 'flex';
+    }
+
+    if (typeof firebase !== "undefined" && firebase.apps.length > 0) {
+      firebase.auth().onAuthStateChanged((user) => {
+        if (user) {
+          showUserSignedIn(user);
+        } else {
+          authSection.style.display = 'block';
+          joinForm.style.display = 'none';
+        }
+      });
+
+      googleBtn.addEventListener('click', () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        firebase.auth().signInWithPopup(provider).then((res) => {
+          showUserSignedIn(res.user);
+        }).catch((err) => {
+          alert("Firebase Sign-In Error: " + err.message);
+        });
+      });
+
+      changeAccountBtn.addEventListener('click', () => {
+        firebase.auth().signOut().then(() => {
+          authSection.style.display = 'block';
+          joinForm.style.display = 'none';
+        });
+      });
+    } else {
+      googleBtn.addEventListener('click', () => {
+        const name = prompt("Enter participant name:", "Student");
+        if (name) {
+          const email = prompt("Enter email address:", `${name.toLowerCase().replace(/\s+/g,'')}@gmail.com`);
+          showUserSignedIn({
+            displayName: name,
+            email: email || '',
+            photoURL: ''
+          });
+        }
+      });
+      changeAccountBtn.addEventListener('click', () => {
+        authSection.style.display = 'block';
+        joinForm.style.display = 'none';
+      });
+    }
+  })();
+</script>
+{% endblock %}

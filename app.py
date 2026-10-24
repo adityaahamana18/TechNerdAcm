@@ -1,0 +1,528 @@
+import os, sqlite3, secrets, time
+from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
+from werkzeug.security import generate_password_hash, check_password_hash
+
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "change-this-secret-key-before-deployment")
+DB = os.path.join(os.path.dirname(__file__), "technerd.db")
+
+RATE_LIMITS = {}
+
+def is_rate_limited(key, max_calls=15, period=5):
+    now = time.time()
+    calls = RATE_LIMITS.get(key, [])
+    calls = [t for t in calls if now - t < period]
+    if len(calls) >= max_calls:
+        RATE_LIMITS[key] = calls
+        return True
+    calls.append(now)
+    RATE_LIMITS[key] = calls
+    return False
+
+def db():
+    conn = sqlite3.connect(DB, timeout=20.0)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    with db() as c:
+        c.executescript("""
+        CREATE TABLE IF NOT EXISTS admins(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'admin'
+        );
+        CREATE TABLE IF NOT EXISTS stages(
+            stage_num INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            requires_topic_choice INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS questions(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            stage INTEGER NOT NULL DEFAULT 1,
+            topic TEXT NOT NULL DEFAULT 'General',
+            question TEXT NOT NULL,
+            a TEXT NOT NULL, b TEXT NOT NULL, c TEXT NOT NULL, d TEXT NOT NULL,
+            answer TEXT NOT NULL CHECK(answer IN ('a','b','c','d')),
+            points INTEGER NOT NULL DEFAULT 10,
+            seconds INTEGER NOT NULL DEFAULT 25,
+            active INTEGER NOT NULL DEFAULT 1
+        );
+        CREATE TABLE IF NOT EXISTS settings(
+            key TEXT PRIMARY KEY, value TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS participants(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT DEFAULT '',
+            photo_url TEXT DEFAULT '',
+            team TEXT NOT NULL DEFAULT '',
+            access_code TEXT NOT NULL,
+            chosen_topic TEXT DEFAULT '',
+            joined_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS responses(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            participant_id INTEGER NOT NULL,
+            question_id INTEGER NOT NULL,
+            choice TEXT NOT NULL,
+            correct INTEGER NOT NULL,
+            points INTEGER NOT NULL,
+            answered_at REAL NOT NULL,
+            UNIQUE(participant_id, question_id),
+            FOREIGN KEY(participant_id) REFERENCES participants(id),
+            FOREIGN KEY(question_id) REFERENCES questions(id)
+        );
+        CREATE TABLE IF NOT EXISTS security_logs(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            participant_id INTEGER,
+            event_type TEXT NOT NULL,
+            details TEXT NOT NULL,
+            created_at REAL NOT NULL,
+            FOREIGN KEY(participant_id) REFERENCES participants(id)
+        );
+        """)
+
+        # Seed default 3 stages configuration
+        c.execute("INSERT OR IGNORE INTO stages(stage_num, name, requires_topic_choice) VALUES(1, 'CS Fundamentals', 0)")
+        c.execute("INSERT OR IGNORE INTO stages(stage_num, name, requires_topic_choice) VALUES(2, 'Core Systems & Architecture', 0)")
+        c.execute("INSERT OR IGNORE INTO stages(stage_num, name, requires_topic_choice) VALUES(3, 'Specialization Domain', 1)")
+
+        c.execute("INSERT OR IGNORE INTO settings(key,value) VALUES('event_code','TECH2026')")
+
+ADMIN_EMAILS = {"adityaahamana18@gmail.com"}
+
+def admin_required(fn):
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        if "admin_email" not in session and "admin_id" not in session:
+            return redirect(url_for("admin_login"))
+        return fn(*args, **kwargs)
+    return wrapped
+
+def setting(conn, key, default=""):
+    row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+    return row["value"] if row else default
+
+def set_setting(conn, key, value):
+    conn.execute("INSERT INTO settings(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, value))
+
+def log_security_event(pid, event_type, details):
+    try:
+        with db() as c:
+            c.execute("INSERT INTO security_logs(participant_id, event_type, details, created_at) VALUES(?,?,?,?)",
+                      (pid, event_type, str(details)[:250], time.time()))
+    except Exception as e:
+        print("Security log error:", e)
+
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+@app.route("/join", methods=["POST"])
+def join():
+    client_ip = request.remote_addr or "unknown"
+    if is_rate_limited(f"join_{client_ip}", max_calls=8, period=10):
+        flash("Too many attempts. Please slow down.", "error")
+        return redirect(url_for("home"))
+
+    name = request.form.get("name", "").strip()[:60]
+    email = request.form.get("email", "").strip()[:100]
+    photo_url = request.form.get("photo_url", "").strip()
+    team = request.form.get("team", "").strip()[:60]
+    code = request.form.get("code", "").strip().upper()
+    
+    with db() as c:
+        expected = setting(c, "event_code", os.environ.get("TECHNERD_EVENT_CODE", "TECH2026")).upper()
+        if not name or code != expected:
+            flash("Enter your name and a valid event code.", "error")
+            return redirect(url_for("home"))
+        
+        cur = c.execute("INSERT INTO participants(name,email,photo_url,team,access_code,joined_at) VALUES(?,?,?,?,?,?)",
+                        (name, email, photo_url, team, secrets.token_urlsafe(12), time.time()))
+        session["participant_id"] = cur.lastrowid
+        session["participant_name"] = name
+        session["participant_photo"] = photo_url
+        c.execute("INSERT INTO security_logs(participant_id, event_type, details, created_at) VALUES(?,?,?,?)",
+                  (session["participant_id"], "PARTICIPANT_JOINED", f"Name: {name}, Email: {email}, IP: {client_ip}", time.time()))
+
+    return redirect(url_for("play"))
+
+@app.route("/logout")
+def logout():
+    session.pop("participant_id", None)
+    session.pop("participant_name", None)
+    session.pop("participant_photo", None)
+    return redirect(url_for("home"))
+
+@app.route("/play")
+def play():
+    pid = session.get("participant_id")
+    if not pid:
+        return redirect(url_for("home"))
+    with db() as c:
+        p = c.execute("SELECT id FROM participants WHERE id=?", (pid,)).fetchone()
+        if not p:
+            session.pop("participant_id", None)
+            flash("Quiz has been reset by the organizer. Please join again.", "error")
+            return redirect(url_for("home"))
+    return render_template("play.html")
+
+@app.route("/api/security-log", methods=["POST"])
+def security_log_endpoint():
+    pid = session.get("participant_id")
+    if not pid:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.json or {}
+    event_type = data.get("event", "UNKNOWN_EVENT")
+    details = data.get("details", "")
+
+    log_security_event(pid, event_type, details)
+    return jsonify({"ok": True})
+
+# Participant selects their custom topic for special stage
+@app.route("/api/choose-topic", methods=["POST"])
+def choose_topic():
+    pid = session.get("participant_id")
+    if not pid:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    topic = (request.json or {}).get("topic", "").strip()
+    if not topic:
+        return jsonify({"error": "Please select a valid topic."}), 400
+
+    with db() as c:
+        c.execute("UPDATE participants SET chosen_topic=? WHERE id=?", (topic, pid))
+        log_security_event(pid, "CHOSE_SPECIAL_TOPIC", f"Topic: {topic}")
+
+    return jsonify({"ok": True, "topic": topic})
+
+# Dynamic Multi-Stage Quiz Progression API
+@app.route("/api/quiz")
+def quiz_state():
+    pid = session.get("participant_id")
+    if not pid:
+        return jsonify({"error": "Join the quiz first."}), 401
+
+    if is_rate_limited(f"quiz_{pid}", max_calls=25, period=5):
+        return jsonify({"error": "Rate limit exceeded. Please wait a moment."}), 429
+
+    with db() as c:
+        p = c.execute("SELECT id, chosen_topic FROM participants WHERE id=?", (pid,)).fetchone()
+        if not p:
+            session.pop("participant_id", None)
+            return jsonify({"status": "reset", "error": "Quiz reset by organizer. Please rejoin."}), 401
+
+        chosen_topic = p["chosen_topic"] or ""
+        
+        # Already answered questions by this participant
+        answered_ids = {row["question_id"] for row in c.execute("SELECT question_id FROM responses WHERE participant_id=?", (pid,)).fetchall()}
+        
+        # Current score calculation
+        score_row = c.execute("SELECT COALESCE(SUM(points), 0) total_score, COUNT(id) answered_count FROM responses WHERE participant_id=?", (pid,)).fetchone()
+        current_score = score_row["total_score"]
+        answered_count = score_row["answered_count"]
+
+        # Fetch configured stages in order
+        stages = c.execute("SELECT stage_num, name, requires_topic_choice FROM stages ORDER BY stage_num ASC").fetchall()
+        
+        if not stages:
+            return jsonify({"status": "empty", "message": "No stages configured yet."})
+
+        # Process each stage dynamically
+        for stage in stages:
+            s_num = stage["stage_num"]
+            s_name = stage["name"]
+            req_topic = bool(stage["requires_topic_choice"])
+
+            # If this stage requires topic selection and user hasn't chosen one yet
+            if req_topic:
+                available_topics = [r["topic"] for r in c.execute("SELECT DISTINCT topic FROM questions WHERE stage=? AND active=1", (s_num,)).fetchall() if r["topic"]]
+                if not chosen_topic or chosen_topic not in available_topics:
+                    return jsonify({
+                        "status": "topic_selection",
+                        "stage": s_num,
+                        "stage_title": f"STAGE {s_num}: {s_name.upper()}",
+                        "available_topics": available_topics if available_topics else ["General"],
+                        "current_score": current_score,
+                        "message": f"Welcome to Stage {s_num}! Choose your topic to begin."
+                    })
+                
+                # Fetch questions for this chosen topic in this stage
+                stage_qs = c.execute("SELECT * FROM questions WHERE stage=? AND topic=? AND active=1 ORDER BY id ASC", (s_num, chosen_topic)).fetchall()
+            else:
+                stage_qs = c.execute("SELECT * FROM questions WHERE stage=? AND active=1 ORDER BY id ASC", (s_num,)).fetchall()
+
+            # Find unanswered question in this stage
+            for idx, q in enumerate(stage_qs):
+                if q["id"] not in answered_ids:
+                    session[f"q_delivered_{q['id']}"] = time.time()
+                    return jsonify({
+                        "status": "in_progress",
+                        "stage": s_num,
+                        "total_stages": len(stages),
+                        "stage_title": f"STAGE {s_num}: {s_name.upper()}",
+                        "topic": q["topic"],
+                        "stage_index": idx + 1,
+                        "stage_total": len(stage_qs),
+                        "current_score": current_score,
+                        "question": {
+                            "id": q["id"], "question": q["question"],
+                            "a": q["a"], "b": q["b"], "c": q["c"], "d": q["d"],
+                            "points": q["points"], "seconds": q["seconds"]
+                        }
+                    })
+
+        # All configured stages completed!
+        return jsonify({
+            "status": "completed",
+            "current_score": current_score,
+            "answered_count": answered_count,
+            "chosen_topic": chosen_topic,
+            "message": "All quiz stages completed successfully!"
+        })
+
+@app.route("/api/answer", methods=["POST"])
+def answer():
+    pid = session.get("participant_id")
+    if not pid:
+        return jsonify({"error": "Join the quiz first."}), 401
+
+    if is_rate_limited(f"ans_{pid}", max_calls=6, period=3):
+        return jsonify({"error": "Submission rate limit exceeded. Please wait a moment."}), 429
+
+    data = request.json or {}
+    qid = data.get("question_id")
+    choice = str(data.get("choice", "")).lower()
+
+    if choice not in ("a", "b", "c", "d", "timeout"):
+        log_security_event(pid, "INVALID_CHOICE_PAYLOAD", f"Question: {qid}, Choice: {choice}")
+        return jsonify({"error": "Invalid option."}), 400
+
+    now = time.time()
+
+    with db() as c:
+        q = c.execute("SELECT * FROM questions WHERE id=? AND active=1", (qid,)).fetchone()
+        if not q:
+            return jsonify({"error": "Question not found."}), 404
+
+        delivered_at = session.get(f"q_delivered_{qid}")
+        if delivered_at:
+            elapsed = now - delivered_at
+            if elapsed > (q["seconds"] + 6) and choice != "timeout":
+                choice = "timeout"
+                log_security_event(pid, "LATE_SUBMISSION", f"QID: {qid}, Elapsed: {elapsed:.1f}s, Max allowed: {q['seconds']}s")
+            elif elapsed < 0.3 and choice != "timeout":
+                log_security_event(pid, "ABNORMAL_FAST_SUBMIT", f"QID: {qid}, Elapsed: {elapsed:.2f}s")
+
+        correct = int(choice == q["answer"])
+        points = q["points"] if correct else 0
+
+        try:
+            c.execute("INSERT INTO responses(participant_id,question_id,choice,correct,points,answered_at) VALUES(?,?,?,?,?,?)",
+                      (pid, qid, choice, correct, points, now))
+        except sqlite3.IntegrityError:
+            log_security_event(pid, "DUPLICATE_SUBMISSION_ATTEMPT", f"QID: {qid}")
+            return jsonify({"error": "You have already answered this question."}), 409
+
+    return jsonify({"ok": True, "correct": bool(correct), "points": points, "correct_answer": q["answer"]})
+
+@app.route("/api/leaderboard")
+@admin_required
+def leaderboard():
+    with db() as c:
+        rows = c.execute("""
+            SELECT p.id, p.name, p.email, p.team, p.chosen_topic,
+                   COALESCE(SUM(r.points), 0) score,
+                   COALESCE(SUM(r.correct), 0) correct,
+                   COUNT(r.id) answered,
+                   MIN(r.answered_at) first_answered,
+                   MAX(r.answered_at) last_answered
+            FROM participants p 
+            LEFT JOIN responses r ON r.participant_id = p.id
+            GROUP BY p.id 
+            ORDER BY score DESC, correct DESC, last_answered ASC
+            LIMIT 200
+        """).fetchall()
+        return jsonify([dict(r) for r in rows])
+
+@app.route("/api/admin/security-logs")
+@admin_required
+def security_logs_api():
+    with db() as c:
+        rows = c.execute("""
+            SELECT l.id, l.event_type, l.details, l.created_at, p.name, p.email 
+            FROM security_logs l 
+            LEFT JOIN participants p ON p.id = l.participant_id 
+            ORDER BY l.id DESC 
+            LIMIT 100
+        """).fetchall()
+        return jsonify([dict(r) for r in rows])
+
+@app.route("/admin")
+def admin_home():
+    if "admin_email" not in session and "admin_id" not in session:
+        return redirect(url_for("admin_login"))
+    return redirect(url_for("dashboard"))
+
+@app.route("/admin/login")
+def admin_login():
+    if session.get("admin_email") in ADMIN_EMAILS:
+        return redirect(url_for("dashboard"))
+    return render_template("admin_login.html")
+
+@app.route("/admin/google-login", methods=["POST"])
+def admin_google_login():
+    email = request.form.get("email", "").strip().lower()
+    name = request.form.get("name", "").strip() or "Admin"
+    
+    if email in ADMIN_EMAILS:
+        session["admin_id"] = 1
+        session["admin_email"] = email
+        session["admin_username"] = name
+        flash(f"Welcome, {name}! Admin access granted.", "success")
+        return redirect(url_for("dashboard"))
+    else:
+        flash(f"Access Denied: '{email}' is not authorized to access the Admin Panel.", "error")
+        return redirect(url_for("admin_login"))
+
+@app.route("/admin/logout")
+def admin_logout():
+    session.pop("admin_id", None)
+    session.pop("admin_email", None)
+    session.pop("admin_username", None)
+    return redirect(url_for("admin_login"))
+
+@app.route("/admin/dashboard")
+@admin_required
+def dashboard():
+    with db() as c:
+        stages = [dict(r) for r in c.execute("SELECT * FROM stages ORDER BY stage_num ASC").fetchall()]
+        questions = [dict(r) for r in c.execute("SELECT * FROM questions ORDER BY stage ASC, topic ASC, id ASC").fetchall()]
+        participants = c.execute("SELECT COUNT(*) n FROM participants").fetchone()["n"]
+        total_responses = c.execute("SELECT COUNT(*) n FROM responses").fetchone()["n"]
+        total_alerts = c.execute("SELECT COUNT(*) n FROM security_logs WHERE event_type != 'PARTICIPANT_JOINED'").fetchone()["n"]
+        event_code = setting(c, "event_code", "TECH2026")
+    return render_template("admin.html", 
+                           stages=stages,
+                           questions=questions, 
+                           participants=participants, 
+                           total_responses=total_responses,
+                           total_alerts=total_alerts,
+                           event_code=event_code)
+
+# Stage Management Routes (Add Stage, Edit Stage, Delete Stage)
+@app.route("/admin/stage", methods=["POST"])
+@admin_required
+def add_or_update_stage():
+    stage_num = int(request.form.get("stage_num", "1"))
+    name = request.form.get("name", "").strip()
+    requires_topic_choice = 1 if request.form.get("requires_topic_choice") else 0
+    if name:
+        with db() as c:
+            c.execute("INSERT INTO stages(stage_num, name, requires_topic_choice) VALUES(?,?,?) ON CONFLICT(stage_num) DO UPDATE SET name=excluded.name, requires_topic_choice=excluded.requires_topic_choice",
+                      (stage_num, name, requires_topic_choice))
+        flash(f"Stage {stage_num} ('{name}') saved successfully.", "success")
+    return redirect(url_for("dashboard"))
+
+@app.route("/admin/stage/<int:snum>/delete", methods=["POST"])
+@admin_required
+def delete_stage(snum):
+    with db() as c:
+        c.execute("DELETE FROM stages WHERE stage_num=?", (snum,))
+        c.execute("DELETE FROM questions WHERE stage=?", (snum,))
+    flash(f"Stage {snum} and its associated questions deleted.", "success")
+    return redirect(url_for("dashboard"))
+
+@app.route("/admin/settings/event-code", methods=["POST"])
+@admin_required
+def update_event_code():
+    code = request.form.get("event_code", "").strip().upper()
+    if code:
+        with db() as c:
+            set_setting(c, "event_code", code)
+        flash(f"Event code updated to {code}", "success")
+    else:
+        flash("Event code cannot be empty.", "error")
+    return redirect(url_for("dashboard"))
+
+@app.route("/admin/question", methods=["POST"])
+@admin_required
+def add_question():
+    stage = int(request.form.get("stage", "1"))
+    topic = request.form.get("topic", "General").strip() or "General"
+    q = request.form.get("question","").strip()
+    opts = [request.form.get(k,"").strip() for k in ("a","b","c","d")]
+    answer = request.form.get("answer","").lower()
+    try:
+        points = max(0, min(1000, int(request.form.get("points","10"))))
+        seconds = max(5, min(300, int(request.form.get("seconds","25"))))
+    except ValueError:
+        points, seconds = 10, 25
+    if q and all(opts) and answer in ("a","b","c","d"):
+        with db() as c:
+            c.execute("INSERT INTO questions(stage,topic,question,a,b,c,d,answer,points,seconds) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                      (stage,topic,q,*opts,answer,points,seconds))
+        flash(f"Question added to Stage {stage} ({topic}).", "success")
+    else:
+        flash("Fill all question fields and select the correct answer.", "error")
+    return redirect(url_for("dashboard"))
+
+@app.route("/admin/question/<int:qid>/edit", methods=["POST"])
+@admin_required
+def edit_question(qid):
+    stage = int(request.form.get("stage", "1"))
+    topic = request.form.get("topic", "General").strip() or "General"
+    q = request.form.get("question","").strip()
+    opts = [request.form.get(k,"").strip() for k in ("a","b","c","d")]
+    answer = request.form.get("answer","").lower()
+    try:
+        points = max(0, min(1000, int(request.form.get("points","10"))))
+        seconds = max(5, min(300, int(request.form.get("seconds","25"))))
+    except ValueError:
+        points, seconds = 10, 25
+    if q and all(opts) and answer in ("a","b","c","d"):
+        with db() as c:
+            c.execute("UPDATE questions SET stage=?, topic=?, question=?, a=?, b=?, c=?, d=?, answer=?, points=?, seconds=? WHERE id=?",
+                      (stage, topic, q, *opts, answer, points, seconds, qid))
+        flash("Question updated successfully.", "success")
+    else:
+        flash("Fill all question fields and select the correct answer.", "error")
+    return redirect(url_for("dashboard"))
+
+@app.route("/admin/question/<int:qid>/delete", methods=["POST"])
+@admin_required
+def delete_question(qid):
+    with db() as c:
+        c.execute("DELETE FROM responses WHERE question_id=?", (qid,))
+        c.execute("DELETE FROM questions WHERE id=?", (qid,))
+    flash("Question deleted.", "success")
+    return redirect(url_for("dashboard"))
+
+@app.route("/admin/reset-scores", methods=["POST"])
+@admin_required
+def reset_scores():
+    with db() as c:
+        c.execute("DELETE FROM responses")
+        c.execute("DELETE FROM security_logs")
+        c.execute("DELETE FROM participants")
+    flash("Complete reset successful: All participants, scores, and security logs have been wiped clean.", "success")
+    return redirect(url_for("dashboard"))
+
+@app.route("/admin/participants")
+@admin_required
+def admin_participants():
+    with db() as c:
+        rows = c.execute("""
+            SELECT p.name,p.email,p.team,p.chosen_topic,p.joined_at,COALESCE(SUM(r.points),0) score,
+            COUNT(r.id) answered FROM participants p LEFT JOIN responses r ON r.participant_id=p.id
+            GROUP BY p.id ORDER BY score DESC
+        """).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+if __name__ == "__main__":
+    init_db()
+    app.run(debug=True, host="127.0.0.1", port=5000)

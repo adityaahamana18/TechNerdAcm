@@ -1,0 +1,9 @@
+service-account-key.json
+.env
+__pycache__/
+*.pyc
+technerd.db
+technerd.db-shm
+technerd.db-wal
+.venv/
+
