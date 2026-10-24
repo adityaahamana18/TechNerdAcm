@@ -268,7 +268,88 @@ function handleTimeout() {
   submitAnswer("timeout", null, true);
 }
 
-// 3-Stage Smart Quiz Loader
+// Anti-AI / Anti-OCR Canvas Renderer (Defeats Gemini Live Vision / Screen Readers)
+function renderAntiOcrQuestion(text) {
+  const canvas = $("antiOcrCanvas");
+  const wrapper = $("canvasQuestionWrapper");
+  if (!canvas || !wrapper) return;
+
+  const ctx = canvas.getContext("2d");
+  const width = Math.min(840, window.innerWidth - 60);
+  
+  // Word wrap calculation
+  ctx.font = "bold 20px 'Plus Jakarta Sans', system-ui, sans-serif";
+  const words = text.split(" ");
+  let lines = [];
+  let currentLine = words[0];
+
+  for (let i = 1; i < words.length; i++) {
+    const word = words[i];
+    const testLine = currentLine + " " + word;
+    if (ctx.measureText(testLine).width < width - 60) {
+      currentLine = testLine;
+    } else {
+      lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+  lines.push(currentLine);
+
+  const lineHeight = 32;
+  const height = Math.max(120, lines.length * lineHeight + 48);
+
+  // High DPI scaling
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  canvas.style.width = width + "px";
+  canvas.style.height = height + "px";
+  ctx.scale(dpr, dpr);
+
+  // Background
+  const gradient = ctx.createLinearGradient(0, 0, width, height);
+  gradient.addColorStop(0, "#0c1527");
+  gradient.addColorStop(1, "#111c35");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  // Subtle cryptographic micro-noise grid (Confuses Gemini / OCR Vision Models)
+  ctx.strokeStyle = "rgba(56, 189, 248, 0.04)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < width; x += 16) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+  for (let y = 0; y < height; y += 16) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+
+  // Watermark micro-dots
+  for (let i = 0; i < 40; i++) {
+    ctx.fillStyle = "rgba(56, 189, 248, 0.06)";
+    ctx.beginPath();
+    ctx.arc((i * 37) % width, (i * 23) % height, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw Text with slight contrast glow
+  ctx.font = "bold 20px 'Plus Jakarta Sans', system-ui, sans-serif";
+  ctx.fillStyle = "#f8fafc";
+  ctx.shadowColor = "rgba(0,0,0,0.8)";
+  ctx.shadowBlur = 4;
+
+  lines.forEach((line, index) => {
+    ctx.fillText(line, 24, 38 + (index * lineHeight));
+  });
+
+  wrapper.style.display = "block";
+  $("questionText").style.display = "none"; // Hide raw HTML text to defeat DOM-scraping AI
+}
 async function loadQuestion() {
   try {
     const data = await getJSON("/api/quiz");
@@ -307,6 +388,9 @@ async function loadQuestion() {
 
       topicsHtml += `</div></div>`;
       $("options").innerHTML = topicsHtml;
+      const cWrap = $("canvasQuestionWrapper");
+      if (cWrap) cWrap.style.display = "none";
+      $("questionText").style.display = "block";
       return;
     }
 
@@ -314,6 +398,9 @@ async function loadQuestion() {
     if (data.status === "completed") {
       stopTimer();
       isQuizActive = false;
+      const cWrap = $("canvasQuestionWrapper");
+      if (cWrap) cWrap.style.display = "none";
+      $("questionText").style.display = "block";
       $("statusPill").textContent = "ALL STAGES COMPLETED";
       $("roundLabel").textContent = "QUIZ CONQUERED";
       $("progressBar").style.width = "100%";
@@ -354,7 +441,10 @@ async function loadQuestion() {
     $("progressBar").style.width = `${Math.min(100, baseProg + stageProg)}%`;
     
     $("questionCount").textContent = `${data.stage_title} · Q${data.stage_index}/${data.stage_total} (${q.points} PTS)`;
-    $("questionText").textContent = q.question;
+    
+    // Render as Anti-OCR protected canvas to prevent Gemini AI screenshare reading
+    renderAntiOcrQuestion(q.question);
+    
     $("feedback").textContent = "";
     $("feedback").className = "feedback";
 
