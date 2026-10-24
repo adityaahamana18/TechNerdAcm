@@ -1600,76 +1600,330 @@ input:focus, textarea:focus, select:focus {
   .admin-grid { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .feature-grid { grid-template-columns: 1fr; }
-  .hero h1 { letter-spacing: -1px; font-size: 38px; }
+  .hero h1 { letter-spacing: -1px; font-size: clamp(34px, 8vw, 44px); }
   .hero p { font-size: 14px; }
 }
 
 @media(max-width: 640px) {
+  .page {
+    width: 100%;
+    padding: 14px 12px 36px;
+  }
+
   .topbar {
-    padding: 0 14px;
-    height: 64px;
+    padding: 0 12px;
+    height: 56px;
+  }
+  .brand {
+    font-size: 15px;
+    gap: 8px;
   }
   .brand small { display: none; }
-  .brand-mark { width: 30px; height: 30px; font-size: 15px; }
-  .top-actions { gap: 8px; }
-  .admin-link { padding: 6px 10px; font-size: 10px; }
+  .brand-mark { width: 28px; height: 28px; font-size: 13px; }
+  .top-actions { gap: 6px; }
+  .admin-link { padding: 5px 9px; font-size: 10px; border-radius: 6px; }
   
-  .stats-grid { grid-template-columns: 1fr 1fr; }
-  .stat { padding: 14px; }
-  .stat small { font-size: 9px; }
-  .stat strong { font-size: 20px; }
-
-  .join-card, .quiz-card, .admin-section {
-    padding: 20px 16px;
-    border-radius: 12px;
+  /* Hero on mobile */
+  .hero {
+    padding: 12px 0 20px;
   }
-  
+  .hero-badge-pill {
+    padding: 5px 12px;
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .hero h1 {
+    font-size: clamp(28px, 8.5vw, 36px);
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+    margin-bottom: 10px;
+  }
+  .hero-tagline {
+    font-size: 11px;
+    letter-spacing: 1.2px;
+  }
+  .hero-tagline .dot {
+    padding: 0 4px;
+  }
+  .hero-copy {
+    font-size: 13px;
+    line-height: 1.5;
+    margin-top: 10px;
+    padding: 0 6px;
+  }
+  .hero-tags {
+    gap: 6px;
+    margin-top: 14px;
+  }
+  .hero-tag-item {
+    font-size: 10px;
+    padding: 6px 10px;
+    gap: 6px;
+  }
+
+  /* Join card & Quiz card */
+  .join-card {
+    padding: 20px 15px;
+    border-radius: 14px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .join-card h2 {
+    font-size: 21px;
+    letter-spacing: -0.3px;
+  }
+  .join-card .muted {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .btn.google-btn {
+    padding: 12px 14px;
+    font-size: 12px;
+  }
+  .stack-form {
+    gap: 13px;
+    margin-top: 14px;
+  }
+  input, textarea, select {
+    padding: 11px 12px;
+    font-size: 13px;
+  }
+  .btn {
+    padding: 12px 15px;
+    font-size: 11.5px;
+  }
+
+  /* Quiz play screen on mobile */
+  .play-layout-single {
+    width: 100%;
+    padding: 0;
+  }
+  .quiz-card {
+    padding: 18px 14px;
+    border-radius: 14px;
+  }
+  .quiz-top {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .pill, .fs-indicator {
+    font-size: 9px;
+    padding: 4px 8px;
+    letter-spacing: 0.8px;
+  }
+  .timer {
+    width: 54px;
+    height: 54px;
+  }
+  .timer small {
+    font-size: 7px;
+    letter-spacing: 0.5px;
+  }
+  .timer strong {
+    font-size: 17px;
+  }
+  .progress-track {
+    margin: 14px 0 16px;
+    height: 4px;
+  }
+  .question-header {
+    margin-bottom: 14px;
+  }
+  .question-count {
+    font-size: 10px;
+    letter-spacing: 1px;
+    line-height: 1.4;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .quiz-card h2 {
+    font-size: 16px;
+    line-height: 1.45;
+    margin-top: 4px;
+    letter-spacing: -0.2px;
+  }
+  .options {
+    gap: 9px;
+  }
+  .option {
+    padding: 12px 12px;
+    gap: 10px;
+    font-size: 13px;
+    line-height: 1.4;
+    border-radius: 9px;
+  }
+  .option-key {
+    width: 26px;
+    height: 26px;
+    font-size: 10px;
+    border-radius: 5px;
+  }
+  .feedback {
+    font-size: 12px;
+    min-height: 20px;
+    margin-top: 12px;
+  }
+  .tip-line {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 10.5px;
+  }
+
+  /* Enter Arena modal on mobile */
+  .security-modal-overlay {
+    padding: 12px;
+  }
+  .security-modal {
+    padding: 22px 15px;
+    border-radius: 16px;
+  }
+  .enter-arena-icon-wrap {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+  .enter-arena-shield {
+    font-size: 24px;
+  }
+  .enter-arena-kicker {
+    font-size: 9px;
+    letter-spacing: 1.2px;
+  }
+  .enter-arena-title {
+    font-size: 19px;
+    margin-bottom: 5px;
+  }
+  .enter-arena-sub {
+    font-size: 12px;
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+  .security-rules-box {
+    padding: 12px 12px;
+    margin-bottom: 16px;
+    border-radius: 10px;
+  }
+  .security-rules-list {
+    gap: 9px;
+  }
+  .rule-icon {
+    font-size: 13px;
+  }
+  .rule-text {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .enter-arena-btn {
+    padding: 12px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+
+  /* Developer Showcase Card on mobile */
+  .dev-card-section {
+    padding: 20px 10px 16px;
+  }
+  .dev-replica-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 22px 14px;
+    gap: 14px;
+    border-radius: 16px;
+  }
+  .dev-replica-avatar-wrap {
+    width: 90px;
+    height: 90px;
+    padding: 3px;
+    margin: 0 auto;
+  }
+  .dev-replica-content {
+    align-items: center;
+    text-align: center;
+    width: 100%;
+  }
+  .dev-replica-kicker {
+    font-size: 9.5px;
+    letter-spacing: 1.6px;
+    margin-bottom: 4px;
+  }
+  .dev-replica-name {
+    font-size: 21px;
+    letter-spacing: -0.3px;
+    margin-bottom: 3px;
+  }
+  .dev-replica-sub {
+    font-size: 12px;
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+  .dev-replica-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .dev-replica-btn {
+    padding: 8px 8px;
+    font-size: 11px;
+    border-radius: 8px;
+    justify-content: center;
+  }
+
+  /* Footer on mobile */
+  .clean-footer {
+    padding: 16px 12px;
+  }
+  .clean-footer .footer-bottom-bar {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+    font-size: 10px;
+  }
+
+  /* Admin elements on mobile */
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat { padding: 12px; border-radius: 10px; }
+  .stat small { font-size: 8.5px; letter-spacing: 1px; }
+  .stat strong { font-size: 18px; margin-top: 4px; }
+  .admin-section { padding: 16px 12px; border-radius: 12px; }
   .section-heading {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
-
   .form-two, .form-three {
     grid-template-columns: 1fr;
   }
-
   .stage-tab-container {
     width: 100%;
     overflow-x: auto;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px;
+    padding-bottom: 6px;
   }
-  
   .leader-row {
-    grid-template-columns: 32px 1fr auto;
-    padding: 10px 8px;
-    gap: 10px;
+    grid-template-columns: 28px 1fr auto;
+    padding: 8px 6px;
+    gap: 8px;
   }
   .player-name {
-    font-size: 12px;
+    font-size: 11.5px;
   }
   .score {
-    font-size: 13px;
-  }
-
-  .dev-replica-actions {
-    width: 100%;
-    justify-content: center;
-  }
-  .dev-replica-btn {
-    flex: 1;
-    min-width: 120px;
-    justify-content: center;
+    font-size: 12.5px;
   }
 }
 
 @media(max-width: 420px) {
+  .hero h1 { font-size: 26px; }
   .stats-grid { grid-template-columns: 1fr; }
   .stat { display: flex; justify-content: space-between; align-items: center; }
   .stat strong { margin-top: 0; }
-  .admin-head h1 { font-size: 26px; }
+  .admin-head h1 { font-size: 22px; }
+  .dev-replica-actions { grid-template-columns: 1fr; }
 }
 
 /* ==========================================================================
