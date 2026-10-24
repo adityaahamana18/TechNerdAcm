@@ -199,15 +199,38 @@ def init_db():
             ]
             c.executemany("INSERT INTO questions(stage, topic, question, a, b, c, d, answer, points, seconds) VALUES(?,?,?,?,?,?,?,?,?,?)", stage1_official_questions)
 
-        # Auto-seed base questions for stage 2 & 3 if empty
-        q_count_row = c.execute("SELECT COUNT(*) as n FROM questions").fetchone()
-        q_count = q_count_row["n"] if isinstance(q_count_row, dict) else q_count_row[0]
-        if q_count <= 25:
-            remaining_samples = [
-                # Stage 2: Core Tech
-                (2, "Core Tech", "Which protocol is used for secure communication over the web?", "HTTP", "FTP", "HTTPS", "SMTP", "c", 15, 25),
-                (2, "Core Tech", "What component in an OS manages hardware resources and processes?", "Compiler", "Kernel", "Linker", "Shell", "b", 15, 25),
+        # Ensure Stage 2 has all 10 official questions in the DB
+        stage2_count_row = c.execute("SELECT COUNT(*) as n FROM questions WHERE stage=2").fetchone()
+        stage2_count = stage2_count_row["n"] if isinstance(stage2_count_row, dict) else stage2_count_row[0]
 
+        if stage2_count < 10:
+            c.execute("DELETE FROM questions WHERE stage=2")
+            stage2_official_questions = [
+                # Git
+                (2, "Git & GitHub", "Which Git command is used to combine commits and rewrite history by reapplying them on top of another branch?", "git merge", "git rebase", "git cherry", "git stash", "b", 15, 25),
+                (2, "Git & GitHub", "What does git stash do?", "Deletes all uncommitted changes permanently", "Pushes changes to the remote repository", "Temporarily saves uncommitted changes and cleans the working directory", "Creates a new branch", "c", 15, 25),
+                (2, "Git & GitHub", "In Git, what is the purpose of a .gitignore file?", "To delete files from the remote repository", "To tell Git which files or folders to not track", "To store commit history", "To list all contributors", "b", 15, 25),
+
+                # C++
+                (2, "C++", "In C++, which of these is true about a reference variable?", "It can be reassigned to refer to another variable", "It can be null", "It must be initialized at the time of declaration", "It is always stored on the heap", "c", 15, 25),
+                (2, "C++", "What is the main purpose of the virtual keyword in C++?", "To declare a constant variable", "To enable runtime polymorphism", "To allocate memory dynamically", "To prevent inheritance", "b", 15, 25),
+
+                # Web Development
+                (2, "Web Development", "Which HTTP method is idempotent and typically used to completely replace a resource?", "POST", "PATCH", "PUT", "CONNECT", "c", 15, 25),
+                (2, "Web Development", "What does the “box model” in CSS consist of?", "Content, padding, border, margin", "Header, body, footer, sidebar", "Flexbox, grid, float, position", "Width, height, color, font", "a", 15, 25),
+                (2, "Web Development", "What is the difference between == and === in JavaScript?", "No difference", "== compares type and value, === compares only value", "== compares only value (with type conversion), === compares value and type", "=== is used only for strings", "c", 15, 25),
+
+                # Python
+                (2, "Python", "In Python, which of these is a mutable data type?", "tuple", "string", "frozenset", "dictionary", "d", 15, 25),
+                (2, "Python", "Which of these is a key feature of Python’s “Global Interpreter Lock” (GIL)?", "It allows true parallel execution of multiple threads", "It lets only one thread execute Python bytecode at a time", "It locks global variables from being modified", "It prevents Python from using multiple files", "b", 15, 25)
+            ]
+            c.executemany("INSERT INTO questions(stage, topic, question, a, b, c, d, answer, points, seconds) VALUES(?,?,?,?,?,?,?,?,?,?)", stage2_official_questions)
+
+        # Auto-seed base questions for stage 3 if empty
+        stage3_count_row = c.execute("SELECT COUNT(*) as n FROM questions WHERE stage=3").fetchone()
+        stage3_count = stage3_count_row["n"] if isinstance(stage3_count_row, dict) else stage3_count_row[0]
+        if stage3_count == 0:
+            stage3_samples = [
                 # Stage 3: Specializations
                 (3, "Artificial Intelligence", "What algorithm is primarily used to train multi-layer neural networks?", "Dijkstra", "Backpropagation", "Binary Search", "Quicksort", "b", 20, 30),
                 (3, "Artificial Intelligence", "Which activation function outputs values in the range (0, 1)?", "ReLU", "Sigmoid", "Linear", "Tanh", "b", 20, 30),
@@ -216,7 +239,7 @@ def init_db():
                 (3, "Cybersecurity & Crypto", "Which encryption type uses a pair of public and private keys?", "Symmetric", "Asymmetric", "Hashing", "Obfuscation", "b", 20, 30),
                 (3, "Cybersecurity & Crypto", "What attack involves overwhelming a network/server with fake traffic?", "SQL Injection", "DDoS", "Phishing", "Cross-Site Scripting", "b", 20, 30)
             ]
-            c.executemany("INSERT INTO questions(stage, topic, question, a, b, c, d, answer, points, seconds) VALUES(?,?,?,?,?,?,?,?,?,?)", remaining_samples)
+            c.executemany("INSERT INTO questions(stage, topic, question, a, b, c, d, answer, points, seconds) VALUES(?,?,?,?,?,?,?,?,?,?)", stage3_samples)
 
 ADMIN_EMAILS = {
     "adityaahamana18@gmail.com",
