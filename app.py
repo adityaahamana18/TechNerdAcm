@@ -750,8 +750,8 @@ def admin_question_control():
     is_json = request.is_json
     data = request.json if is_json else request.form
 
-    stage = data.get("stage")
-    action = data.get("action")
+    stage = str(data.get("stage") or "").strip()
+    action = str(data.get("action") or "").strip()
     target_q = data.get("target_q")
 
     if stage in ("1", "2", "3"):

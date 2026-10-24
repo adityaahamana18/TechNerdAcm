@@ -980,7 +980,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          stage: liveQModalStage,
+          stage: String(liveQModalStage),
           action: direction
         })
       });
@@ -1003,7 +1003,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          stage: liveQModalStage,
+          stage: String(liveQModalStage),
           action: "set",
           target_q: val
         })

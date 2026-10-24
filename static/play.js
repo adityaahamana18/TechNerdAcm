@@ -295,10 +295,10 @@ async function loadQuestion() {
         </div>
       `;
 
-      // Auto-poll every 2.5 seconds to detect when admin clicks "RELEASE NEXT Q"
+      // Auto-poll every 1.5 seconds to detect when admin clicks "RELEASE NEXT Q"
       setTimeout(() => {
-        if (!isQuizActive) loadQuestion();
-      }, 2500);
+        loadQuestion();
+      }, 1500);
       return;
     }
 
