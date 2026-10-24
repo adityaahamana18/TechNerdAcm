@@ -11,6 +11,7 @@
     </p>
     <ul class="security-rules-list">
       <li><span>🔒</span> <strong>Fullscreen Enforced:</strong> Keep arena fullscreen throughout the quiz.</li>
+      <li><span>🎙️</span> <strong>Microphone Lock:</strong> Microphone access is enforced to lock audio hardware and prevent background voice-assistants / Gemini Live calls.</li>
       <li><span>🚫</span> <strong>Screenshare Prohibited:</strong> Screen-sharing, screen recording, and dual monitors are blocked.</li>
       <li><span>⚠️</span> <strong>Tab Tracking:</strong> Switching tabs, windows, or minimizing will trigger proctor alerts.</li>
       <li><span>🛡️</span> <strong>Integrity Lock:</strong> Copy, paste, developer tools, and right-clicks are disabled.</li>
@@ -64,6 +65,7 @@
      <div style="display:flex; align-items:center; gap:10px;">
        <span class="pill" id="statusPill">PROCTORED</span>
        <span class="fs-indicator" id="fsStatusBadge" title="Fullscreen status">⛶ FULLSCREEN</span>
+       <span class="fs-indicator" id="micStatusBadge" style="border-color:rgba(16,185,129,0.3); background:rgba(16,185,129,0.08); color:var(--green);" title="Microphone Lock status">🎙️ MIC LOCKED</span>
      </div>
      <div class="timer"><small>SECONDS</small><strong id="timer">--</strong></div>
    </div>

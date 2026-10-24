@@ -8,6 +8,55 @@ let fullscreenExitCount = 0;
 let isQuizStarted = false;
 let isFullscreenPaused = false;
 let isScreenShareBlocked = false;
+let micMediaStream = null;
+let isMicActive = false;
+
+// Mandatory Microphone Acquisition & Lock
+async function enforceMicrophoneLock() {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error("Browser does not support media device capture.");
+    }
+    // Requests exclusive audio stream to lock microphone resource in Chrome
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      },
+      video: false
+    });
+    micMediaStream = stream;
+    isMicActive = true;
+
+    const micBadge = $("micStatusBadge");
+    if (micBadge) {
+      micBadge.textContent = "🎙️ MIC ACTIVE";
+      micBadge.style.color = "var(--green)";
+      micBadge.style.borderColor = "rgba(16,185,129,0.4)";
+    }
+
+    // Monitor if microphone is accidentally disconnected or revoked
+    const audioTrack = stream.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.onended = () => {
+        isMicActive = false;
+        sendSecurityLog("MIC_DISCONNECTED", "Microphone access was disconnected or revoked");
+        showViolationWarning("⚠️ Microphone disconnected! Continuous microphone lock is required.");
+        if (micBadge) {
+          micBadge.textContent = "🎙️ MIC REVOKED";
+          micBadge.style.color = "var(--danger)";
+        }
+      };
+    }
+    return true;
+  } catch (err) {
+    console.error("Microphone Access Denied:", err);
+    sendSecurityLog("MIC_ACCESS_DENIED", err.message || "User denied microphone permissions");
+    alert("⚠️ MICROPHONE ACCESS REQUIRED!\n\nTo ensure fair proctoring and block external audio/Gemini tools, you must click 'Allow' for Microphone permission to proceed with the quiz.");
+    return false;
+  }
+}
 
 async function getJSON(url, options = {}) {
   const r = await fetch(url, options);
@@ -535,8 +584,17 @@ async function submitAnswer(choice, clickedBtn, isTimeout = false) {
   }
 }
 
-// Fullscreen Modal Activation
+// Fullscreen & Microphone Modal Activation
 $("enterFsBtn").addEventListener("click", async () => {
+  // 1. Mandatory Microphone Lock
+  if (!isMicActive) {
+    const micGranted = await enforceMicrophoneLock();
+    if (!micGranted) {
+      return; // Do not start quiz without microphone lock
+    }
+  }
+
+  // 2. Fullscreen Enforcement
   await requestFullScreen();
   $("fsModal").style.display = "none";
   isQuizStarted = true;
