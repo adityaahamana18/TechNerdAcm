@@ -285,7 +285,10 @@ def init_db():
 
 ADMIN_EMAILS = {
     "adityaahamana18@gmail.com",
-    "25cb1mr81@mitsgwl.ac.in"
+    "25cb1mr81@mitsgwl.ac.in",
+    "pranshuguptami10@gmail.com",
+    "johnsahil031@gmail.com",
+    "luthranipriyanshi@gmail.com"
 }
 
 def admin_required(fn):
